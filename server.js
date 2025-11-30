@@ -4,11 +4,12 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 // Import configuration
-const env = require('./src/config/env');
+const loadAndValidateEnv = require('./src/config/env');
+const env = loadAndValidateEnv(); // Execute function to get config
 const pool = require('./src/config/database');
 
 // Import middleware
-const errorHandler = require('./src/middleware/errorHandler');
+const { errorHandler } = require('./src/middleware/errorHandler');
 
 // Import controllers
 const authController = require('./src/controllers/authController');
