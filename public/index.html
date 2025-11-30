@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H-Socket Manager - Redirecting...</title>
+    <script>
+        // Redirect to login page
+        window.location.href = '/login.html';
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .habitacion {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .habitacion::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: currentColor;
+        }
+
+        .habitacion:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .habitacion.libre {
+            color: #10b981;
+            border: 3px solid #10b981;
+        }
+
+        .habitacion.ocupada {
+            color: #ef4444;
+            border: 3px solid #ef4444;
+        }
+
+        .habitacion-numero {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .habitacion-estado {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .habitacion-icono {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .habitacion-accion {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+
+        .leyenda {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 30px;
+            color: white;
+        }
+
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .leyenda-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+        }
+
+        .leyenda-color.libre {
+            background: #10b981;
+        }
+
+        .leyenda-color.ocupada {
+            background: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏨 Sistema de Gestión Hotelera</h1>
+        <div class="status" id="status">Conectando...</div>
+    </div>
+
+    <div class="container" id="habitaciones-container">
+        <!-- Las habitaciones se cargarán dinámicamente -->
+    </div>
+
+    <div class="leyenda">
+        <div class="leyenda-item">
+            <div class="leyenda-color libre"></div>
+            <span>Disponible (Click para reservar)</span>
+        </div>
+        <div class="leyenda-item">
+            <div class="leyenda-color ocupada"></div>
+            <span>Ocupada (Click para liberar)</span>
+        </div>
+    </div>
+
+    <!-- Socket.IO Client desde CDN -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script>
+        // Conectar al servidor WebSocket
+        const socket = io();
+
+        const statusElement = document.getElementById('status');
+        const containerElement = document.getElementById('habitaciones-container');
+
+        // Evento: Conexión exitosa
+        socket.on('connect', () => {
+            statusElement.textContent = '🟢 Conectado al servidor';
+            statusElement.style.background = 'rgba(16, 185, 129, 0.3)';
+        });
+
+        // Evento: Desconexión
+        socket.on('disconnect', () => {
+            statusElement.textContent = '🔴 Desconectado del servidor';
+            statusElement.style.background = 'rgba(239, 68, 68, 0.3)';
+        });
+
+        // Evento: Recibir estado inicial de habitaciones
+        socket.on('estado_habitaciones', (habitaciones) => {
+            renderizarHabitaciones(habitaciones);
+        });
+
+        // Evento: Actualizar tablero en tiempo real
+        socket.on('actualizar_tablero', (habitaciones) => {
+            renderizarHabitaciones(habitaciones);
+        });
+
+        // Evento: Error
+        socket.on('error', (data) => {
+            alert(`❌ Error: ${data.mensaje}`);
+        });
+
+        // Función para renderizar habitaciones
+        function renderizarHabitaciones(habitaciones) {
+            containerElement.innerHTML = '';
+
+            habitaciones.forEach(habitacion => {
+                const card = document.createElement('div');
+                card.className = `habitacion ${habitacion.estado}`;
+                
+                const icono = habitacion.estado === 'libre' ? '✅' : '🔒';
+                const accion = habitacion.estado === 'libre' ? 'Click para reservar' : 'Click para liberar';
+
+                card.innerHTML = `
+                    <div class="habitacion-icono">${icono}</div>
+                    <div class="habitacion-numero">Hab. ${habitacion.numero}</div>
+                    <div class="habitacion-estado">${habitacion.estado}</div>
+                    <div class="habitacion-accion">${accion}</div>
+                `;
+
+                // Evento click: Reservar o Liberar
+                card.addEventListener('click', () => {
+                    if (habitacion.estado === 'libre') {
+                        socket.emit('reservar_habitacion', habitacion.id);
+                    } else {
+                        socket.emit('liberar_habitacion', habitacion.id);
+                    }
+                });
+
+                containerElement.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

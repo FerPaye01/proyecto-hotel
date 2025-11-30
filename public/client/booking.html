@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Booking - H-Socket Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-info {
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .nav-tab:hover {
+            color: #667eea;
+        }
+
+        .nav-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .room-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .room-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .room-card.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .room-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .room-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .room-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e8eaf6;
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .room-price {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .room-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .room-status.available {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #666;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-checked-in {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-checked-out {
+            background: #d6d8db;
+            color: #383d41;
+        }
+
+        .badge-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .cost-preview {
+            background: #f8f9ff;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .cost-preview h3 {
+            color: #667eea;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .cost-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .cost-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+            padding-top: 10px;
+            border-top: 2px solid #667eea;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏨 Client Booking Portal</h1>
+        <div class="header-actions">
+            <span class="user-info" id="user-info"></span>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="booking">Nueva Reserva</button>
+            <button class="nav-tab" data-tab="history">Mis Reservas</button>
+        </div>
+
+        <!-- Booking Tab -->
+        <div id="booking-tab" class="tab-content active">
+            <div class="card">
+                <h2>Buscar Habitaciones Disponibles</h2>
+                <div id="booking-message" class="message"></div>
+                
+                <form id="search-rooms-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="check-in-date">Fecha de Check-in *</label>
+                            <input type="date" id="check-in-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="check-out-date">Fecha de Check-out *</label>
+                            <input type="date" id="check-out-date" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Buscar Habitaciones</button>
+                </form>
+            </div>
+
+            <div class="card" id="available-rooms-section" style="display: none;">
+                <h2>Habitaciones Disponibles</h2>
+                <div id="rooms-loading" class="loading" style="display: none;">Cargando habitaciones...</div>
+                <div id="rooms-grid" class="rooms-grid"></div>
+                <div id="rooms-empty" class="empty-state" style="display: none;">
+                    <h3>No hay habitaciones disponibles</h3>
+                    <p>Intenta con otras fechas</p>
+                </div>
+            </div>
+
+            <div class="card" id="booking-form-section" style="display: none;">
+                <h2>Confirmar Reserva</h2>
+                <form id="create-booking-form">
+                    <input type="hidden" id="selected-room-id">
+                    
+                    <div class="form-group">
+                        <label>Habitación Seleccionada</label>
+                        <input type="text" id="selected-room-display" readonly>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Fecha de Check-in</label>
+                            <input type="text" id="booking-check-in" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Check-out</label>
+                            <input type="text" id="booking-check-out" readonly>
+                        </div>
+                    </div>
+
+                    <div class="cost-preview" id="cost-preview">
+                        <h3>Resumen de Costos</h3>
+                        <div class="cost-details">
+                            <span>Precio por noche:</span>
+                            <span id="price-per-night">$0</span>
+                        </div>
+                        <div class="cost-details">
+                            <span>Número de noches:</span>
+                            <span id="num-nights">0</span>
+                        </div>
+                        <div class="cost-total">
+                            <span>Total:</span>
+                            <span id="total-cost">$0</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="margin-top: 20px;">Confirmar Reserva</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <div class="card">
+                <h2>Historial de Reservas</h2>
+                <div id="history-loading" class="loading">Cargando reservas...</div>
+                <div id="history-list" class="table-container" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID Reserva</th>
+                                <th>Habitación</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Costo Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="history-empty" class="empty-state" style="display: none;">
+                    <h3>No tienes reservas</h3>
+                    <p>Crea tu primera reserva en la pestaña "Nueva Reserva"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/socketClient.js"></script>
+    <script src="/client/booking.js"></script>
+</body>
+</html>

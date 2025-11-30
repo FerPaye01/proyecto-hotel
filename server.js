@@ -1,0 +1,68 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+
+// Import configuration
+const env = require('./src/config/env');
+const pool = require('./src/config/database');
+
+// Import middleware
+const errorHandler = require('./src/middleware/errorHandler');
+
+// Import controllers
+const authController = require('./src/controllers/authController');
+const roomController = require('./src/controllers/roomController');
+const bookingController = require('./src/controllers/bookingController');
+const operationsController = require('./src/controllers/operationsController');
+const adminController = require('./src/controllers/adminController');
+const { initializeSocketController } = require('./src/controllers/socketController');
+
+// Initialize Express app
+const app = express();
+const server = http.createServer(app);
+
+// Middleware chain
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'healthy', database: 'connected' });
+  } catch (error) {
+    res.status(503).json({ status: 'unhealthy', database: 'disconnected', error: error.message });
+  }
+});
+
+// Register HTTP route controllers
+app.use('/api/auth', authController);
+app.use('/api/rooms', roomController);
+app.use('/api/bookings', bookingController);
+app.use('/api/operations', operationsController);
+app.use('/api/admin', adminController);
+
+// Global error handler (must be last)
+app.use(errorHandler);
+
+// Initialize Socket.IO with CORS
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Initialize Socket.IO controller
+initializeSocketController(io);
+
+// Start server
+const PORT = env.PORT;
+
+server.listen(PORT, () => {
+  console.log(`🏨 H-Socket Distributed Manager running on port ${PORT}`);
+  console.log(`📊 Health check available at http://localhost:${PORT}/health`);
+});
