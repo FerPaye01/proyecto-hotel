@@ -3,9 +3,6 @@
  * Handles user management, room management, reports, and audit logs
  */
 
-// Require admin role
-requireRole('admin');
-
 // API base URL
 const API_BASE = '/api';
 
@@ -17,6 +14,9 @@ let socket = null;
  * Initialize dashboard on page load
  */
 document.addEventListener('DOMContentLoaded', () => {
+    // Require admin role (must be inside DOMContentLoaded)
+    requireRole('admin');
+    
     // Display user info
     displayUserInfo();
     
@@ -48,9 +48,12 @@ function displayUserInfo() {
  */
 function initializeTabs() {
     const tabs = document.querySelectorAll('.nav-tab');
+    console.log('Initializing tabs, found:', tabs.length);
     
     tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', (e) => {
+            console.log('Tab clicked:', tab.getAttribute('data-tab'));
+            
             // Remove active class from all tabs
             tabs.forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -58,7 +61,14 @@ function initializeTabs() {
             // Add active class to clicked tab
             tab.classList.add('active');
             const tabName = tab.getAttribute('data-tab');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            const tabContent = document.getElementById(`${tabName}-tab`);
+            
+            if (tabContent) {
+                tabContent.classList.add('active');
+                console.log('Activated tab:', tabName);
+            } else {
+                console.error('Tab content not found for:', tabName);
+            }
             
             // Load data for specific tabs
             if (tabName === 'audit') {
