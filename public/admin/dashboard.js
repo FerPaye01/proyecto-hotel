@@ -40,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function displayUserInfo() {
     const userInfo = document.getElementById('user-info');
-    const role = getUserRole();
     userInfo.textContent = `Admin`;
 }
 
@@ -66,6 +65,8 @@ function initializeTabs() {
                 loadAuditLogs();
             } else if (tabName === 'reports') {
                 loadReports();
+            } else if (tabName === 'rooms') {
+                loadRooms();
             }
         });
     });
@@ -96,6 +97,10 @@ async function handleCreateUser(event) {
     const role = document.getElementById('user-role').value;
     
     const messageEl = document.getElementById('user-message');
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creando...';
     
     try {
         const response = await fetch(`${API_BASE}/admin/users`, {
@@ -112,14 +117,17 @@ async function handleCreateUser(event) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage(messageEl, 'success', 'Usuario creado exitosamente');
+            showMessage(messageEl, 'success', `Usuario creado exitosamente: ${email}`);
             event.target.reset();
         } else {
-            showMessage(messageEl, 'error', data.error || 'Error al crear usuario');
+            showMessage(messageEl, 'error', data.message || 'Error al crear usuario');
         }
     } catch (error) {
         console.error('Error creating user:', error);
         showMessage(messageEl, 'error', 'Error de conexión al crear usuario');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Crear Usuario';
     }
 }
 
@@ -135,6 +143,10 @@ async function handleCreateRoom(event) {
     const status = document.getElementById('room-status').value;
     
     const messageEl = document.getElementById('room-message');
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creando...';
     
     try {
         const response = await fetch(`${API_BASE}/rooms`, {
@@ -151,16 +163,19 @@ async function handleCreateRoom(event) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage(messageEl, 'success', 'Habitación creada exitosamente');
+            showMessage(messageEl, 'success', `Habitación ${number} creada exitosamente`);
             event.target.reset();
             // Reload rooms list
             loadRooms();
         } else {
-            showMessage(messageEl, 'error', data.error || 'Error al crear habitación');
+            showMessage(messageEl, 'error', data.message || 'Error al crear habitación');
         }
     } catch (error) {
         console.error('Error creating room:', error);
         showMessage(messageEl, 'error', 'Error de conexión al crear habitación');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Crear Habitación';
     }
 }
 
@@ -181,7 +196,8 @@ async function loadRooms() {
         });
         
         if (response.ok) {
-            rooms = await response.json();
+            const data = await response.json();
+            rooms = data.rooms || [];
             renderRoomsTable(rooms, tableBody);
             loadingEl.style.display = 'none';
             listEl.style.display = 'block';
@@ -211,7 +227,7 @@ function renderRoomsTable(roomsData, tableBody) {
         row.innerHTML = `
             <td>${escapeHtml(room.number)}</td>
             <td>${escapeHtml(room.type)}</td>
-            <td>$${room.price_per_night.toFixed(2)}</td>
+            <td>$${parseFloat(room.price_per_night).toFixed(2)}</td>
             <td><span class="badge badge-${room.status.toLowerCase()}">${room.status}</span></td>
         `;
         tableBody.appendChild(row);
@@ -237,7 +253,8 @@ async function loadAuditLogs() {
         });
         
         if (response.ok) {
-            const logs = await response.json();
+            const data = await response.json();
+            const logs = data.logs || [];
             
             if (logs.length === 0) {
                 loadingEl.style.display = 'none';
@@ -270,7 +287,7 @@ function renderAuditTable(logs, tableBody) {
         
         row.innerHTML = `
             <td>${timestamp}</td>
-            <td>${log.actor_id || 'Sistema'}</td>
+            <td>${log.actor_id ? log.actor_id.substring(0, 8) + '...' : 'Sistema'}</td>
             <td>${escapeHtml(log.action)}</td>
             <td>${details}</td>
         `;
@@ -335,27 +352,29 @@ async function loadReports() {
  */
 function renderReports(report) {
     // Update statistics
-    document.getElementById('stat-total-rooms').textContent = report.total_rooms || 0;
-    document.getElementById('stat-occupied-rooms').textContent = report.occupied_rooms || 0;
+    const occupancy = report.occupancy || {};
+    const bookings = report.bookings || {};
+    const revenue = report.revenue || {};
     
-    const occupancyRate = report.total_rooms > 0 
-        ? ((report.occupied_rooms / report.total_rooms) * 100).toFixed(1)
-        : 0;
-    document.getElementById('stat-occupancy-rate').textContent = `${occupancyRate}%`;
-    
-    document.getElementById('stat-total-bookings').textContent = report.total_bookings || 0;
-    document.getElementById('stat-total-revenue').textContent = `$${(report.total_revenue || 0).toFixed(2)}`;
+    document.getElementById('stat-total-rooms').textContent = occupancy.totalRooms || 0;
+    document.getElementById('stat-occupied-rooms').textContent = occupancy.occupiedRooms || 0;
+    document.getElementById('stat-occupancy-rate').textContent = occupancy.occupancyRate ? `${occupancy.occupancyRate}%` : '0%';
+    document.getElementById('stat-total-bookings').textContent = bookings.totalBookings || 0;
+    document.getElementById('stat-total-revenue').textContent = `$${revenue.totalRevenue || '0.00'}`;
     
     // Render rooms by status
     const roomsByStatusBody = document.getElementById('rooms-by-status-body');
     roomsByStatusBody.innerHTML = '';
     
-    if (report.rooms_by_status && report.rooms_by_status.length > 0) {
-        report.rooms_by_status.forEach(item => {
+    const roomsByStatus = occupancy.roomsByStatus || {};
+    const roomStatusEntries = Object.entries(roomsByStatus);
+    
+    if (roomStatusEntries.length > 0) {
+        roomStatusEntries.forEach(([status, count]) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><span class="badge badge-${item.status.toLowerCase()}">${item.status}</span></td>
-                <td>${item.count}</td>
+                <td><span class="badge badge-${status.toLowerCase()}">${status}</span></td>
+                <td>${count}</td>
             `;
             roomsByStatusBody.appendChild(row);
         });
@@ -367,12 +386,15 @@ function renderReports(report) {
     const bookingsByStatusBody = document.getElementById('bookings-by-status-body');
     bookingsByStatusBody.innerHTML = '';
     
-    if (report.bookings_by_status && report.bookings_by_status.length > 0) {
-        report.bookings_by_status.forEach(item => {
+    const bookingsByStatus = bookings.bookingsByStatus || {};
+    const bookingStatusEntries = Object.entries(bookingsByStatus);
+    
+    if (bookingStatusEntries.length > 0) {
+        bookingStatusEntries.forEach(([status, count]) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${escapeHtml(item.status)}</td>
-                <td>${item.count}</td>
+                <td>${escapeHtml(status)}</td>
+                <td>${count}</td>
             `;
             bookingsByStatusBody.appendChild(row);
         });
@@ -385,20 +407,24 @@ function renderReports(report) {
  * Initialize WebSocket connection for real-time updates
  */
 function initializeWebSocket() {
-    socket = initializeSocket(
-        // On connect
-        (sock) => {
-            console.log('WebSocket connected');
-            
-            // Listen for room updates
-            sock.on('roomUpdate', handleRoomUpdate);
-            sock.on('roomCreated', handleRoomCreated);
-        },
-        // On disconnect
-        (reason) => {
-            console.log('WebSocket disconnected:', reason);
-        }
-    );
+    try {
+        socket = initializeSocket(
+            // On connect
+            (sock) => {
+                console.log('WebSocket connected');
+                
+                // Listen for room updates
+                sock.on('room:updated', handleRoomUpdate);
+                sock.on('room:created', handleRoomCreated);
+            },
+            // On disconnect
+            (reason) => {
+                console.log('WebSocket disconnected:', reason);
+            }
+        );
+    } catch (error) {
+        console.error('Error initializing WebSocket:', error);
+    }
 }
 
 /**
