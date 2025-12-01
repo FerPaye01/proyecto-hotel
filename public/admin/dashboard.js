@@ -8,7 +8,7 @@ const API_BASE = '/api';
 
 // State
 let rooms = [];
-let socket = null;
+let dashboardSocket = null;
 
 /**
  * Initialize dashboard on page load
@@ -418,7 +418,7 @@ function renderReports(report) {
  */
 function initializeWebSocket() {
     try {
-        socket = initializeSocket(
+        dashboardSocket = initializeSocket(
             // On connect
             (sock) => {
                 console.log('WebSocket connected');
