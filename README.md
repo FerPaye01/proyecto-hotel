@@ -20,6 +20,8 @@ Real-time hotel management system with PostgreSQL persistence, WebSocket synchro
 
 H-Socket Distributed Manager is a production-grade distributed hotel management system that enables real-time state synchronization across multiple client nodes through WebSocket-based event-driven architecture with centralized PostgreSQL persistence.
 
+**System Type**: B2B (Business-to-Business) - Internal hotel management system where admins control user access.
+
 ### Key Capabilities
 
 - **Real-time Synchronization**: WebSocket-based instant updates across all connected clients
@@ -27,26 +29,30 @@ H-Socket Distributed Manager is a production-grade distributed hotel management 
 - **Audit Trail**: Comprehensive logging of all critical operations
 - **Transaction Safety**: ACID-compliant booking operations with conflict detection
 - **Persistent Storage**: PostgreSQL as single source of truth
+- **Controlled Access**: Admin-managed user accounts (no public registration)
 
 ## Features
 
 ### Admin Dashboard
-- User management (create staff and client accounts)
-- Room management (CRUD operations)
-- Audit log viewing
-- Occupancy reports and analytics
+- **User Management**: Create staff and client accounts (no self-registration)
+- **Room Management**: Create, update, and view all rooms
+- **Audit Log Viewing**: Track all system operations with timestamps
+- **Occupancy Reports**: View real-time statistics and analytics
+- **Full System Access**: Access to all features and data
 
 ### Staff Operations
-- Real-time room status dashboard with color-coded indicators
-- Check-in/check-out operations
-- Room status management
-- Late checkout penalty calculation
+- **Real-time Dashboard**: Color-coded room status indicators
+- **Check-in Operations**: Process guest arrivals
+- **Check-out Operations**: Process guest departures with late penalty calculation
+- **Room Status Management**: Update room status (cleaning, maintenance)
 
 ### Client Booking
-- View available rooms
-- Create bookings with date range selection
-- View booking history
-- Real-time availability updates
+- **Room Search**: View available rooms by date range
+- **Booking Creation**: Reserve rooms with automatic cost calculation
+- **Booking History**: View personal booking history
+- **Real-time Updates**: Instant availability updates via WebSocket
+
+**Note**: Clients cannot self-register. An admin must create their account first.
 
 ## Architecture
 
@@ -205,6 +211,12 @@ node scripts/seed.js
 - Email: `admin@hotel.com`
 - Password: `admin123`
 
+**Important Notes:**
+- The system is **not public** - users cannot self-register
+- Only admins can create new user accounts (staff and clients)
+- Clients must have an account created by an admin before they can book rooms
+- This is a B2B (Business-to-Business) hotel management system
+
 ### 6. Start the Server
 
 ```bash
@@ -215,11 +227,24 @@ The server will start on `http://localhost:3000` (or the PORT specified in your 
 
 ### 7. Access the Application
 
-- **Landing Page**: http://localhost:3000
+- **Landing Page**: http://localhost:3000 (redirects to login)
 - **Login**: http://localhost:3000/login.html
+
+After logging in, you'll be redirected based on your role:
 - **Admin Dashboard**: http://localhost:3000/admin/dashboard.html
 - **Staff Operations**: http://localhost:3000/staff/operations.html
 - **Client Booking**: http://localhost:3000/client/booking.html
+
+### 8. Create Additional Users
+
+As an admin, you can create staff and client accounts:
+
+1. Log in with admin credentials
+2. Go to the "Usuarios" tab
+3. Fill in the form with email, password, full name, and role
+4. Click "Crear Usuario"
+
+**Note**: There is no user list view in the dashboard. To verify a user was created, try logging in with their credentials.
 
 ## Environment Variables
 

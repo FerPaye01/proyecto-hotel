@@ -4,6 +4,8 @@
  * Validates: Requirements 11.1, 11.2, 11.3, 11.5
  */
 
+require('dotenv').config();
+
 function loadAndValidateEnv() {
   const requiredVars = ['DATABASE_URL', 'JWT_SECRET'];
   const missingVars = [];
