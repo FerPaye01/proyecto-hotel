@@ -1,7 +1,6 @@
 // Staff Operations Dashboard JavaScript
 
 let rooms = [];
-let socket = null;
 
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,7 +40,7 @@ function displayUserInfo() {
 
 // Initialize WebSocket connection
 function connectSocket() {
-    socket = initializeSocket(
+    initializeSocket(
         // onConnect callback
         (connectedSocket) => {
             console.log('Socket connected, setting up event listeners');
@@ -52,15 +51,11 @@ function connectSocket() {
             console.log('Socket disconnected:', reason);
         }
     );
-    
-    if (!socket) {
-        console.error('Failed to initialize socket connection');
-        return;
-    }
 }
 
 // Setup socket event listeners
 function setupSocketListeners() {
+    const socket = getSocket();
     if (!socket) return;
 
     // Listen for room updates
@@ -356,9 +351,7 @@ function showError(message) {
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         // Disconnect socket
-        if (socket) {
-            socket.disconnect();
-        }
+        disconnectSocket();
         
         // Clear token and redirect
         localStorage.removeItem('token');
