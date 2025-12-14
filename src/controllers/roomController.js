@@ -7,7 +7,7 @@
 const express = require('express');
 const roomService = require('../services/roomService');
 const { authenticateJWT } = require('../middleware/auth');
-const { requireRole } = require('../middleware/rbac');
+const { requireRole, requireAnyRole } = require('../middleware/rbac');
 
 const router = express.Router();
 
@@ -54,7 +54,7 @@ router.post('/', authenticateJWT, requireRole('admin'), async (req, res, next) =
     }
 
     // Create room using service
-    const room = await roomService.createRoom(req.user.id, {
+    const room = await roomService.createRoom(req.user.id, req.user.role, {
       number,
       type,
       price_per_night,
@@ -99,10 +99,109 @@ router.put('/:id', authenticateJWT, requireRole('admin'), async (req, res, next)
     }
 
     // Update room using service
-    const room = await roomService.updateRoom(req.user.id, roomId, updates);
+    const room = await roomService.updateRoom(req.user.id, req.user.role, roomId, updates);
 
     res.status(200).json({ room });
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/rooms/:id/status
+ * Update room status (staff or admin)
+ * Requirements: 3.3, 3.4, 11.1
+ */
+router.put('/:id/status', authenticateJWT, requireAnyRole('staff', 'admin'), async (req, res, next) => {
+  try {
+    const roomId = parseInt(req.params.id);
+    
+    if (isNaN(roomId)) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid room ID'
+      });
+    }
+
+    const { status } = req.body;
+
+    // Validate status is provided
+    if (!status) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Status is required'
+      });
+    }
+
+    // Call roomService.updateRoomStatus
+    const room = await roomService.updateRoomStatus(
+      req.user.id,
+      req.user.role,
+      roomId,
+      status
+    );
+
+    res.status(200).json({ room });
+  } catch (error) {
+    // Handle authorization errors
+    if (error.code === 'AUTHORIZATION_ERROR') {
+      return res.status(403).json({
+        error: 'AUTHORIZATION_ERROR',
+        message: error.message
+      });
+    }
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/rooms/:id/pricing
+ * Update room pricing (admin only)
+ * Requirements: 1.3, 4.4
+ */
+router.put('/:id/pricing', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+  try {
+    const roomId = parseInt(req.params.id);
+    
+    if (isNaN(roomId)) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid room ID'
+      });
+    }
+
+    const { price_per_night, type } = req.body;
+
+    // Validate at least one pricing field is provided
+    if (price_per_night === undefined && type === undefined) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'At least one pricing field (price_per_night or type) is required'
+      });
+    }
+
+    // Build pricing object
+    const pricing = {};
+    if (price_per_night !== undefined) pricing.price_per_night = price_per_night;
+    if (type !== undefined) pricing.type = type;
+
+    // Call roomService.updateRoomPricing
+    const room = await roomService.updateRoomPricing(
+      req.user.id,
+      req.user.role,
+      roomId,
+      pricing
+    );
+
+    res.status(200).json({ room });
+  } catch (error) {
+    // Handle authorization errors
+    if (error.code === 'AUTHORIZATION_ERROR') {
+      return res.status(403).json({
+        error: 'AUTHORIZATION_ERROR',
+        message: error.message
+      });
+    }
     next(error);
   }
 });

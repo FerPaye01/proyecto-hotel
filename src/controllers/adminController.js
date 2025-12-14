@@ -60,10 +60,11 @@ router.get('/audit-logs', authenticateJWT, requireRole('admin'), async (req, res
 });
 
 /**
- * GET /api/admin/reports/occupancy
- * Get occupancy metrics and financial reports (admin only)
+ * GET /api/admin/reports/financial
+ * Get financial reports with revenue and occupancy metrics (admin only)
+ * Requirements: 1.4
  */
-router.get('/reports/occupancy', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+router.get('/reports/financial', authenticateJWT, requireRole('admin'), async (req, res, next) => {
   try {
     const pool = require('../config/database');
 
@@ -118,7 +119,8 @@ router.get('/reports/occupancy', authenticateJWT, requireRole('admin'), async (r
     const monthlyRevenueQuery = `
       SELECT 
         DATE_TRUNC('month', created_at) as month,
-        SUM(total_cost) as revenue
+        SUM(total_cost) as revenue,
+        COUNT(*) as booking_count
       FROM bookings
       WHERE status IN ('CHECKED_OUT', 'CHECKED_IN')
         AND created_at >= NOW() - INTERVAL '12 months'
@@ -127,21 +129,60 @@ router.get('/reports/occupancy', authenticateJWT, requireRole('admin'), async (r
     `;
     const monthlyRevenueResult = await pool.query(monthlyRevenueQuery);
 
+    // Get transaction history summary
+    const transactionQuery = `
+      SELECT 
+        COUNT(*) as total_transactions,
+        SUM(total_cost) as total_amount
+      FROM bookings
+      WHERE status IN ('CHECKED_OUT', 'CHECKED_IN', 'CONFIRMED')
+    `;
+    const transactionResult = await pool.query(transactionQuery);
+    const transactionData = transactionResult.rows[0];
+
     res.status(200).json({
+      revenue: {
+        totalRevenue: totalRevenue.toFixed(2),
+        monthlyRevenue: monthlyRevenueResult.rows.map(row => ({
+          month: row.month,
+          revenue: parseFloat(row.revenue || 0).toFixed(2),
+          bookingCount: parseInt(row.booking_count)
+        }))
+      },
       occupancy: {
         totalRooms,
         occupiedRooms: occupiedCount,
-        occupancyRate: occupancyRate.toFixed(2),
+        occupancyRate: parseFloat(occupancyRate.toFixed(2)),
         roomsByStatus
       },
       bookings: {
         totalBookings,
         bookingsByStatus
       },
-      revenue: {
-        totalRevenue: totalRevenue.toFixed(2),
-        monthlyRevenue: monthlyRevenueResult.rows
+      transactions: {
+        totalTransactions: parseInt(transactionData.total_transactions || 0),
+        totalAmount: parseFloat(transactionData.total_amount || 0).toFixed(2)
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/admin/users
+ * Get all users with role information (admin only)
+ * Requirements: 4.1
+ */
+router.get('/users', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+  try {
+    // Get all users from database
+    const users = await User.findAll();
+
+    // Return users (password_hash is already excluded in User.findAll())
+    res.status(200).json({
+      users,
+      total: users.length
     });
   } catch (error) {
     next(error);

@@ -96,6 +96,16 @@ class User {
     const result = await pool.query(query, [id]);
     return result.rowCount > 0;
   }
+
+  /**
+   * Get all users
+   * @returns {Promise<Array>} Array of all user objects
+   */
+  static async findAll() {
+    const query = 'SELECT id, email, role, full_name, created_at, updated_at FROM users ORDER BY created_at DESC';
+    const result = await pool.query(query);
+    return result.rows;
+  }
 }
 
 module.exports = User;

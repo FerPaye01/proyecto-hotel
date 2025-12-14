@@ -187,7 +187,7 @@ describe('Room Service', () => {
         status: 'AVAILABLE'
       };
 
-      const result = await roomService.createRoom(testActorId, roomData);
+      const result = await roomService.createRoom(testActorId, 'admin', 'admin', roomData);
 
       // Should return created room
       expect(result).toBeDefined();
@@ -218,7 +218,7 @@ describe('Room Service', () => {
       };
 
       await expect(
-        roomService.createRoom(testActorId, roomData)
+        roomService.createRoom(testActorId, 'admin', roomData)
       ).rejects.toThrow();
     });
 
@@ -231,7 +231,7 @@ describe('Room Service', () => {
       };
 
       await expect(
-        roomService.createRoom(testActorId, roomData)
+        roomService.createRoom(testActorId, 'admin', roomData)
       ).rejects.toThrow();
     });
 
@@ -244,7 +244,7 @@ describe('Room Service', () => {
       };
 
       await expect(
-        roomService.createRoom(testActorId, roomData)
+        roomService.createRoom(testActorId, 'admin', roomData)
       ).rejects.toThrow('Price per night must be a positive number');
     });
 
@@ -256,7 +256,7 @@ describe('Room Service', () => {
       };
 
       await expect(
-        roomService.createRoom(testActorId, roomData)
+        roomService.createRoom(testActorId, 'admin', roomData)
       ).rejects.toThrow('Room number is required');
     });
   });
@@ -264,25 +264,25 @@ describe('Room Service', () => {
   describe('getRoomsByStatus', () => {
     beforeEach(async () => {
       // Create test rooms with different statuses
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-201',
         type: 'simple',
         price_per_night: 100,
         status: 'AVAILABLE'
       });
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-202',
         type: 'doble',
         price_per_night: 150,
         status: 'OCCUPIED'
       });
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-203',
         type: 'suite',
         price_per_night: 250,
         status: 'AVAILABLE'
       });
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-204',
         type: 'simple',
         price_per_night: 100,
@@ -336,7 +336,7 @@ describe('Room Service', () => {
 
     beforeEach(async () => {
       // Create a test room
-      const room = await roomService.createRoom(testActorId, {
+      const room = await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-301',
         type: 'simple',
         price_per_night: 100,
@@ -354,7 +354,7 @@ describe('Room Service', () => {
         price_per_night: 120
       };
 
-      const result = await roomService.updateRoom(testActorId, testRoomId, updates);
+      const result = await roomService.updateRoom(testActorId, 'admin', testRoomId, updates);
 
       // Should return updated room
       expect(result).toBeDefined();
@@ -380,25 +380,25 @@ describe('Room Service', () => {
 
     test('should throw error when updating non-existent room', async () => {
       await expect(
-        roomService.updateRoom(testActorId, 99999, { status: 'OCCUPIED' })
+        roomService.updateRoom(testActorId, 'admin', 99999, { status: 'OCCUPIED' })
       ).rejects.toThrow('Room not found');
     });
 
     test('should throw error with invalid status update', async () => {
       await expect(
-        roomService.updateRoom(testActorId, testRoomId, { status: 'INVALID_STATUS' })
+        roomService.updateRoom(testActorId, 'admin', testRoomId, { status: 'INVALID_STATUS' })
       ).rejects.toThrow();
     });
 
     test('should throw error with invalid type update', async () => {
       await expect(
-        roomService.updateRoom(testActorId, testRoomId, { type: 'invalid_type' })
+        roomService.updateRoom(testActorId, 'admin', testRoomId, { type: 'invalid_type' })
       ).rejects.toThrow();
     });
 
     test('should throw error with negative price update', async () => {
       await expect(
-        roomService.updateRoom(testActorId, testRoomId, { price_per_night: -50 })
+        roomService.updateRoom(testActorId, 'admin', testRoomId, { price_per_night: -50 })
       ).rejects.toThrow('Price per night must be a positive number');
     });
   });
@@ -406,13 +406,13 @@ describe('Room Service', () => {
   describe('getAllRooms', () => {
     beforeEach(async () => {
       // Create test rooms
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-401',
         type: 'simple',
         price_per_night: 100,
         status: 'AVAILABLE'
       });
-      await roomService.createRoom(testActorId, {
+      await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-402',
         type: 'doble',
         price_per_night: 150,
@@ -440,7 +440,7 @@ describe('Room Service', () => {
 
     beforeEach(async () => {
       // Create a test room
-      const room = await roomService.createRoom(testActorId, {
+      const room = await roomService.createRoom(testActorId, 'admin', {
         number: 'UNIT-501',
         type: 'suite',
         price_per_night: 250,
@@ -584,7 +584,7 @@ describe('Booking Service', () => {
         check_out_date: '2025-02-05'
       };
 
-      const result = await bookingService.createBooking(testActorId, bookingData);
+      const result = await bookingService.createBooking(testActorId, 'client', bookingData);
 
       // Should return created booking
       expect(result).toBeDefined();
@@ -611,7 +611,7 @@ describe('Booking Service', () => {
         check_in_date: '2025-03-01',
         check_out_date: '2025-03-05'
       };
-      await bookingService.createBooking(testActorId, firstBooking);
+      await bookingService.createBooking(testActorId, 'client', firstBooking);
 
       // Try to create overlapping booking
       const conflictingBooking = {
@@ -622,7 +622,7 @@ describe('Booking Service', () => {
       };
 
       await expect(
-        bookingService.createBooking(testActorId, conflictingBooking)
+        bookingService.createBooking(testActorId, 'client', conflictingBooking)
       ).rejects.toThrow(/conflict/i);
     });
 
@@ -634,7 +634,7 @@ describe('Booking Service', () => {
       };
 
       await expect(
-        bookingService.createBooking(testActorId, invalidBooking)
+        bookingService.createBooking(testActorId, 'client', invalidBooking)
       ).rejects.toThrow('Missing required booking fields');
     });
 
@@ -647,7 +647,7 @@ describe('Booking Service', () => {
       };
 
       await expect(
-        bookingService.createBooking(testActorId, invalidBooking)
+        bookingService.createBooking(testActorId, 'client', invalidBooking)
       ).rejects.toThrow('Check-out date must be after check-in date');
     });
 
@@ -660,7 +660,7 @@ describe('Booking Service', () => {
       };
 
       await expect(
-        bookingService.createBooking(testActorId, bookingData)
+        bookingService.createBooking(testActorId, 'client', bookingData)
       ).rejects.toThrow('Room not found');
     });
   });
@@ -668,13 +668,13 @@ describe('Booking Service', () => {
   describe('getBookingsByUserId', () => {
     beforeEach(async () => {
       // Create test bookings
-      await bookingService.createBooking(testActorId, {
+      await bookingService.createBooking(testActorId, 'client', {
         user_id: testUserId,
         room_id: testRoom.id,
         check_in_date: '2025-06-01',
         check_out_date: '2025-06-05'
       });
-      await bookingService.createBooking(testActorId, {
+      await bookingService.createBooking(testActorId, 'client', {
         user_id: testUserId,
         room_id: testRoom.id,
         check_in_date: '2025-07-01',
@@ -812,10 +812,10 @@ describe('Operations Service', () => {
         check_out_date: formatDate(checkOutDate)
       };
 
-      const booking = await bookingService.createBooking(testActorId, bookingData);
+      const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
 
       // Perform check-in
-      const result = await operationsService.checkIn(testActorId, booking.id);
+      const result = await operationsService.checkIn(testActorId, 'staff', booking.id);
 
       // Verify results
       expect(result.booking).toBeDefined();
@@ -847,11 +847,11 @@ describe('Operations Service', () => {
         check_out_date: formatDate(checkOutDate)
       };
 
-      const booking = await bookingService.createBooking(testActorId, bookingData);
+      const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
 
       // Attempt check-in before scheduled date
       await expect(
-        operationsService.checkIn(testActorId, booking.id)
+        operationsService.checkIn(testActorId, 'staff', booking.id)
       ).rejects.toThrow(/before the scheduled check-in date/i);
 
       // Verify booking and room status remain unchanged
@@ -866,7 +866,7 @@ describe('Operations Service', () => {
       const invalidBookingId = '00000000-0000-0000-0000-000000000000';
 
       await expect(
-        operationsService.checkIn(testActorId, invalidBookingId)
+        operationsService.checkIn(testActorId, 'staff', invalidBookingId)
       ).rejects.toThrow(/Booking not found/i);
     });
 
@@ -883,12 +883,12 @@ describe('Operations Service', () => {
         check_out_date: formatDate(checkOutDate)
       };
 
-      const booking = await bookingService.createBooking(testActorId, bookingData);
-      await operationsService.checkIn(testActorId, booking.id);
+      const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
+      await operationsService.checkIn(testActorId, 'staff', booking.id);
 
       // Attempt to check in again
       await expect(
-        operationsService.checkIn(testActorId, booking.id)
+        operationsService.checkIn(testActorId, 'staff', booking.id)
       ).rejects.toThrow(/Cannot check in booking with status/i);
     });
   });
@@ -907,11 +907,11 @@ describe('Operations Service', () => {
         check_out_date: formatDate(checkOutDate)
       };
 
-      const booking = await bookingService.createBooking(testActorId, bookingData);
-      await operationsService.checkIn(testActorId, booking.id);
+      const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
+      await operationsService.checkIn(testActorId, 'staff', booking.id);
 
       // Perform check-out
-      const result = await operationsService.checkOut(testActorId, testRoom.id);
+      const result = await operationsService.checkOut(testActorId, 'staff', testRoom.id);
 
       // Verify results
       expect(result.booking).toBeDefined();
@@ -946,13 +946,13 @@ describe('Operations Service', () => {
         check_out_date: formatDate(checkOutDate)
       };
 
-      const booking = await bookingService.createBooking(testActorId, bookingData);
+      const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
       const originalTotalCost = parseFloat(booking.total_cost);
       
-      await operationsService.checkIn(testActorId, booking.id);
+      await operationsService.checkIn(testActorId, 'staff', booking.id);
 
       // Perform late check-out
-      const result = await operationsService.checkOut(testActorId, testRoom.id);
+      const result = await operationsService.checkOut(testActorId, 'staff', testRoom.id);
 
       // Verify late penalty was calculated (50% of one night)
       const expectedPenalty = parseFloat(testRoom.price_per_night) * 0.5;
@@ -971,14 +971,14 @@ describe('Operations Service', () => {
       const invalidRoomId = 99999;
 
       await expect(
-        operationsService.checkOut(testActorId, invalidRoomId)
+        operationsService.checkOut(testActorId, 'staff', invalidRoomId)
       ).rejects.toThrow(/Room not found/i);
     });
 
     test('should reject check-out for room with no active booking', async () => {
       // Room exists but has no checked-in booking
       await expect(
-        operationsService.checkOut(testActorId, testRoom.id)
+        operationsService.checkOut(testActorId, 'staff', testRoom.id)
       ).rejects.toThrow(/No active booking found/i);
     });
   });

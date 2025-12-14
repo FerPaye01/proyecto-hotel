@@ -32,14 +32,13 @@ function generateToken(userId, role) {
  * Verify and decode a JWT token
  * @param {string} token - The JWT token to verify
  * @returns {object} Decoded token payload containing userId and role
- * @throws {Error} If token is invalid or expired
+ * @throws {TokenExpiredError} If token has expired
+ * @throws {JsonWebTokenError} If token is invalid or tampered
  */
 function verifyToken(token) {
-  try {
-    return jwt.verify(token, config.JWT_SECRET);
-  } catch (error) {
-    throw new Error('Invalid or expired token');
-  }
+  // jwt.verify will throw TokenExpiredError or JsonWebTokenError
+  // We let these propagate so the caller can handle them appropriately
+  return jwt.verify(token, config.JWT_SECRET);
 }
 
 module.exports = {

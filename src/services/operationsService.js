@@ -25,11 +25,20 @@ class OperationsService {
    * Check in a guest
    * Updates booking status to CHECKED_IN and room status to OCCUPIED
    * @param {string} actorId - UUID of the staff member performing check-in
+   * @param {string} actorRole - Role of the actor (must be 'staff' or 'admin')
    * @param {string} bookingId - UUID of the booking
    * @returns {Promise<Object>} Object containing updated booking and room
-   * @throws {Error} If validation fails or check-in is before check_in_date
+   * @throws {Error} If authorization fails, validation fails, or check-in is before check_in_date
    */
-  static async checkIn(actorId, bookingId) {
+  static async checkIn(actorId, actorRole, bookingId) {
+    // Verify actor role is 'staff' or 'admin'
+    if (actorRole !== 'staff' && actorRole !== 'admin') {
+      const error = new Error('Insufficient permissions to perform check-in operations');
+      error.code = 'AUTHORIZATION_ERROR';
+      error.statusCode = 403;
+      throw error;
+    }
+
     // Validate required parameters
     if (!actorId) {
       throw new Error('Actor ID is required');
@@ -151,11 +160,20 @@ class OperationsService {
    * Updates booking status to CHECKED_OUT and room status to CLEANING
    * Calculates late checkout penalties if applicable
    * @param {string} actorId - UUID of the staff member performing check-out
+   * @param {string} actorRole - Role of the actor (must be 'staff' or 'admin')
    * @param {number} roomId - Room ID
    * @returns {Promise<Object>} Object containing updated booking and room
-   * @throws {Error} If validation fails or room has no active booking
+   * @throws {Error} If authorization fails, validation fails, or room has no active booking
    */
-  static async checkOut(actorId, roomId) {
+  static async checkOut(actorId, actorRole, roomId) {
+    // Verify actor role is 'staff' or 'admin'
+    if (actorRole !== 'staff' && actorRole !== 'admin') {
+      const error = new Error('Insufficient permissions to perform check-out operations');
+      error.code = 'AUTHORIZATION_ERROR';
+      error.statusCode = 403;
+      throw error;
+    }
+
     // Validate required parameters
     if (!actorId) {
       throw new Error('Actor ID is required');

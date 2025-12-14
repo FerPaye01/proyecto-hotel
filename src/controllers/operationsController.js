@@ -28,7 +28,7 @@ router.post('/checkin', authenticateJWT, requireRole('staff'), async (req, res, 
     }
 
     // Perform check-in using operations service
-    const result = await OperationsService.checkIn(req.user.id, booking_id);
+    const result = await OperationsService.checkIn(req.user.id, req.user.role, booking_id);
 
     res.status(200).json({
       message: 'Check-in successful',
@@ -66,7 +66,7 @@ router.post('/checkout', authenticateJWT, requireRole('staff'), async (req, res,
     }
 
     // Perform check-out using operations service
-    const result = await OperationsService.checkOut(req.user.id, roomId);
+    const result = await OperationsService.checkOut(req.user.id, req.user.role, roomId);
 
     res.status(200).json({
       message: 'Check-out successful',

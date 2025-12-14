@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Verify staff role
     const role = getUserRole();
     if (role !== 'staff') {
-        alert('Access denied. Staff role required.');
+        alert('Acceso denegado. Se requiere rol de personal.');
         window.location.href = '/login.html';
         return;
     }
@@ -34,7 +34,7 @@ function displayUserInfo() {
     const role = getUserRole();
     const userInfoEl = document.getElementById('userInfo');
     if (userInfoEl) {
-        userInfoEl.textContent = `Role: ${role.toUpperCase()}`;
+        userInfoEl.textContent = `Rol: ${role.toUpperCase()}`;
     }
 }
 
@@ -117,7 +117,7 @@ async function fetchRooms() {
         renderRoomGrid();
     } catch (error) {
         console.error('Error fetching rooms:', error);
-        showError('Failed to load rooms. Please refresh the page.');
+        showError('Error al cargar habitaciones. Por favor recarga la página.');
     }
 }
 
@@ -130,8 +130,8 @@ function renderRoomGrid() {
     if (rooms.length === 0) {
         gridEl.innerHTML = `
             <div class="empty-state">
-                <h3>No rooms available</h3>
-                <p>Contact your administrator to add rooms to the system.</p>
+                <h3>No hay habitaciones disponibles</h3>
+                <p>Contacta a tu administrador para agregar habitaciones al sistema.</p>
             </div>
         `;
         return;
@@ -145,15 +145,20 @@ function createRoomCard(room) {
     return `
         <div class="room-card ${room.status}" onclick="handleRoomClick(${room.id}, '${room.status}')">
             <div class="room-number">${room.number}</div>
-            <div class="room-type">${room.type}</div>
-            <div class="room-status">${room.status}</div>
-            <div class="room-price">$${parseFloat(room.price_per_night).toFixed(2)}/night</div>
+            <div class="room-type">${{'simple': 'Simple', 'doble': 'Doble', 'suite': 'Suite'}[room.type] || room.type}</div>
+            <div class="room-status">${{'AVAILABLE': 'DISPONIBLE', 'OCCUPIED': 'OCUPADA', 'CLEANING': 'LIMPIEZA', 'MAINTENANCE': 'MANTENIMIENTO'}[room.status] || room.status}</div>
+            <div class="room-price">$${parseFloat(room.price_per_night).toFixed(2)}/noche</div>
         </div>
     `;
 }
 
 // Handle room card click
 function handleRoomClick(roomId, status) {
+    const statusTranslations = {
+        'CLEANING': 'LIMPIEZA',
+        'MAINTENANCE': 'MANTENIMIENTO'
+    };
+    
     if (status === 'OCCUPIED') {
         // Open check-out modal
         openCheckoutModal(roomId);
@@ -162,7 +167,7 @@ function handleRoomClick(roomId, status) {
         openCheckinModal();
     } else {
         // For CLEANING or MAINTENANCE, just show info
-        alert(`Room is currently in ${status} status. No action available.`);
+        alert(`La habitación está actualmente en estado ${statusTranslations[status] || status}. No hay acciones disponibles.`);
     }
 }
 
@@ -237,9 +242,15 @@ function populateRoomSelect() {
 
     const occupiedRooms = rooms.filter(r => r.status === 'OCCUPIED');
     
-    selectEl.innerHTML = '<option value="">Select a room</option>' +
+    const typeTranslations = {
+        'simple': 'Simple',
+        'doble': 'Doble',
+        'suite': 'Suite'
+    };
+    
+    selectEl.innerHTML = '<option value="">Selecciona una habitación</option>' +
         occupiedRooms.map(room => 
-            `<option value="${room.id}">Room ${room.number} (${room.type})</option>`
+            `<option value="${room.id}">Habitación ${room.number} (${typeTranslations[room.type] || room.type})</option>`
         ).join('');
 }
 
@@ -251,7 +262,7 @@ async function handleCheckin(event) {
     const token = getToken();
     
     if (!bookingId) {
-        showMessage('checkinError', 'Please enter a booking ID');
+        showMessage('checkinError', 'Por favor ingresa un ID de reserva');
         return;
     }
 
@@ -268,10 +279,10 @@ async function handleCheckin(event) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Check-in failed');
+            throw new Error(data.message || 'Error en el check-in');
         }
 
-        showMessage('checkinSuccess', 'Check-in completed successfully!');
+        showMessage('checkinSuccess', '¡Check-in completado exitosamente!');
         
         // Close modal after 1.5 seconds
         setTimeout(() => {
@@ -280,7 +291,7 @@ async function handleCheckin(event) {
 
     } catch (error) {
         console.error('Check-in error:', error);
-        showMessage('checkinError', error.message || 'Failed to complete check-in');
+        showMessage('checkinError', error.message || 'Error al completar el check-in');
     }
 }
 
@@ -292,7 +303,7 @@ async function handleCheckout(event) {
     const token = getToken();
     
     if (!roomId) {
-        showMessage('checkoutError', 'Please select a room');
+        showMessage('checkoutError', 'Por favor selecciona una habitación');
         return;
     }
 
@@ -309,10 +320,10 @@ async function handleCheckout(event) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Check-out failed');
+            throw new Error(data.message || 'Error en el check-out');
         }
 
-        showMessage('checkoutSuccess', 'Check-out completed successfully!');
+        showMessage('checkoutSuccess', '¡Check-out completado exitosamente!');
         
         // Close modal after 1.5 seconds
         setTimeout(() => {
@@ -321,7 +332,7 @@ async function handleCheckout(event) {
 
     } catch (error) {
         console.error('Check-out error:', error);
-        showMessage('checkoutError', error.message || 'Failed to complete check-out');
+        showMessage('checkoutError', error.message || 'Error al completar el check-out');
     }
 }
 
@@ -349,7 +360,7 @@ function showError(message) {
 
 // Logout function
 function logout() {
-    if (confirm('Are you sure you want to logout?')) {
+    if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
         // Disconnect socket
         disconnectSocket();
         

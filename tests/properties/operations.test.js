@@ -127,7 +127,7 @@ describe('Property 9: Check-in state transitions', () => {
             check_out_date: formatDate(checkOutDate)
           };
 
-          const booking = await bookingService.createBooking(testActorId, bookingData);
+          const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
           expect(booking.status).toBe('CONFIRMED');
 
           // Get initial room state
@@ -135,7 +135,7 @@ describe('Property 9: Check-in state transitions', () => {
 
           try {
             // Execute: Perform check-in
-            const result = await operationsService.checkIn(testActorId, booking.id);
+            const result = await operationsService.checkIn(testActorId, 'staff', booking.id);
 
             // Property 1: Booking status must be CHECKED_IN
             expect(result.booking.status).toBe('CHECKED_IN');
@@ -183,12 +183,12 @@ describe('Property 9: Check-in state transitions', () => {
       check_out_date: formatDate(checkOutDate)
     };
 
-    const booking = await bookingService.createBooking(testActorId, bookingData);
+    const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
 
     try {
       // Execute: Attempt check-in before scheduled date
       await expect(
-        operationsService.checkIn(testActorId, booking.id)
+        operationsService.checkIn(testActorId, 'staff', booking.id)
       ).rejects.toThrow(/before the scheduled check-in date/i);
 
       // Property: Booking and room status should remain unchanged
@@ -281,10 +281,10 @@ describe('Property 10: Check-out state transitions', () => {
             check_out_date: formatDate(checkOutDate)
           };
 
-          const booking = await bookingService.createBooking(testActorId, bookingData);
+          const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
           
           // Perform check-in
-          await operationsService.checkIn(testActorId, booking.id);
+          await operationsService.checkIn(testActorId, 'staff', booking.id);
 
           // Verify checked-in state
           const bookingAfterCheckIn = await pool.query('SELECT * FROM bookings WHERE id = $1', [booking.id]);
@@ -295,7 +295,7 @@ describe('Property 10: Check-out state transitions', () => {
 
           try {
             // Execute: Perform check-out
-            const result = await operationsService.checkOut(testActorId, testRoom.id);
+            const result = await operationsService.checkOut(testActorId, 'staff', testRoom.id);
 
             // Property 1: Booking status must be CHECKED_OUT
             expect(result.booking.status).toBe('CHECKED_OUT');
@@ -410,15 +410,15 @@ describe('Property 11: Late checkout penalty calculation', () => {
             check_out_date: formatDate(checkOutDate)
           };
 
-          const booking = await bookingService.createBooking(testActorId, bookingData);
+          const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
           const originalTotalCost = parseFloat(booking.total_cost);
           
           // Perform check-in
-          await operationsService.checkIn(testActorId, booking.id);
+          await operationsService.checkIn(testActorId, 'staff', booking.id);
 
           try {
             // Execute: Perform check-out (which is late)
-            const result = await operationsService.checkOut(testActorId, testRoom.id);
+            const result = await operationsService.checkOut(testActorId, 'staff', testRoom.id);
 
             // Determine if checkout is actually late
             const now = new Date();
@@ -476,15 +476,15 @@ describe('Property 11: Late checkout penalty calculation', () => {
       check_out_date: formatDate(checkOutDate)
     };
 
-    const booking = await bookingService.createBooking(testActorId, bookingData);
+    const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
     const originalTotalCost = parseFloat(booking.total_cost);
     
     // Perform check-in
-    await operationsService.checkIn(testActorId, booking.id);
+    await operationsService.checkIn(testActorId, 'staff', booking.id);
 
     try {
       // Execute: Perform on-time check-out
-      const result = await operationsService.checkOut(testActorId, testRoom.id);
+      const result = await operationsService.checkOut(testActorId, 'staff', testRoom.id);
 
       // Property: No penalty for on-time checkout
       expect(result.late_penalty).toBe(0);

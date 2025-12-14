@@ -546,7 +546,7 @@ describe('WebSocket Integration Tests', () => {
       });
 
       // Create room
-      const createdRoom = await roomService.createRoom(testAdmin.id, roomData);
+      const createdRoom = await roomService.createRoom(testAdmin.id, 'admin', roomData);
 
       // Wait for broadcasts
       const [client1Data, client2Data] = await Promise.all([
@@ -598,7 +598,7 @@ describe('WebSocket Integration Tests', () => {
       });
 
       // Create booking
-      const createdBooking = await bookingService.createBooking(testUser.id, bookingData);
+      const createdBooking = await bookingService.createBooking(testUser.id, 'client', bookingData);
 
       // Wait for broadcasts
       const [client1Data, client2Data] = await Promise.all([
@@ -650,7 +650,7 @@ describe('WebSocket Integration Tests', () => {
       });
 
       // Perform check-in
-      await operationsService.checkIn(testStaff.id, bookingId);
+      await operationsService.checkIn(testStaff.id, 'staff', bookingId);
 
       // Wait for broadcasts
       const [client1Data, client2Data] = await Promise.all([
@@ -709,7 +709,7 @@ describe('WebSocket Integration Tests', () => {
       ];
 
       // Create room
-      const createdRoom = await roomService.createRoom(testAdmin.id, roomData);
+      const createdRoom = await roomService.createRoom(testAdmin.id, 'admin', roomData);
 
       // Wait for all broadcasts
       const results = await Promise.all(promises);

@@ -139,7 +139,7 @@ describe('Property 13: Booking conflict detection', () => {
             check_out_date: formatDate(existingCheckOut)
           };
 
-          const createdBooking = await bookingService.createBooking(testActorId, existingBookingData);
+          const createdBooking = await bookingService.createBooking(testActorId, 'client', existingBookingData);
           expect(createdBooking).toBeDefined();
 
           try {
@@ -158,11 +158,11 @@ describe('Property 13: Booking conflict detection', () => {
             if (hasOverlap) {
               // Property: If dates overlap, booking should be rejected
               await expect(
-                bookingService.createBooking(testActorId, newBookingData)
+                bookingService.createBooking(testActorId, 'client', newBookingData)
               ).rejects.toThrow(/conflict/i);
             } else {
               // Property: If dates don't overlap, booking should succeed
-              const newBookingResult = await bookingService.createBooking(testActorId, newBookingData);
+              const newBookingResult = await bookingService.createBooking(testActorId, 'client', newBookingData);
               expect(newBookingResult).toBeDefined();
               expect(newBookingResult.room_id).toBe(testRoom.id);
               expect(newBookingResult.status).toBe('CONFIRMED');
@@ -283,7 +283,7 @@ describe('Property 14: User data isolation', () => {
             const checkIn = addDays(baseDate, bookingData.startOffset);
             const checkOut = addDays(checkIn, bookingData.duration);
 
-            const booking = await bookingService.createBooking(testActorId, {
+            const booking = await bookingService.createBooking(testActorId, 'client', {
               user_id: testUser1Id,
               room_id: testRoom1.id,
               check_in_date: formatDate(checkIn),
@@ -297,7 +297,7 @@ describe('Property 14: User data isolation', () => {
             const checkIn = addDays(baseDate, bookingData.startOffset);
             const checkOut = addDays(checkIn, bookingData.duration);
 
-            const booking = await bookingService.createBooking(testActorId, {
+            const booking = await bookingService.createBooking(testActorId, 'client', {
               user_id: testUser2Id,
               room_id: testRoom2.id,
               check_in_date: formatDate(checkIn),
@@ -437,8 +437,8 @@ describe('Property 15: Concurrent booking serialization', () => {
 
           // Execute: Attempt concurrent bookings
           const results = await Promise.allSettled([
-            bookingService.createBooking(testActorId, bookingData1),
-            bookingService.createBooking(testActorId, bookingData2)
+            bookingService.createBooking(testActorId, 'client', bookingData1),
+            bookingService.createBooking(testActorId, 'client', bookingData2)
           ]);
 
           // Property 1: Exactly one should succeed
@@ -561,7 +561,7 @@ describe('Property 16: Transaction atomicity', () => {
           // Execute: Attempt to create booking
           if (validBooking) {
             // Should succeed
-            const booking = await bookingService.createBooking(testActorId, bookingData);
+            const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
             expect(booking).toBeDefined();
 
             // Property 1: Booking should be in database
@@ -585,7 +585,7 @@ describe('Property 16: Transaction atomicity', () => {
           } else {
             // Should fail
             await expect(
-              bookingService.createBooking(testActorId, bookingData)
+              bookingService.createBooking(testActorId, 'client', bookingData)
             ).rejects.toThrow();
 
             // Property 3: No booking should be in database (rollback)

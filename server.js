@@ -13,11 +13,15 @@ const { errorHandler } = require('./src/middleware/errorHandler');
 
 // Import controllers
 const authController = require('./src/controllers/authController');
+const userController = require('./src/controllers/userController');
 const roomController = require('./src/controllers/roomController');
 const bookingController = require('./src/controllers/bookingController');
 const operationsController = require('./src/controllers/operationsController');
 const adminController = require('./src/controllers/adminController');
 const { initializeSocketController } = require('./src/controllers/socketController');
+
+// Import services
+const cronService = require('./src/services/cronService');
 
 // Initialize Express app
 const app = express();
@@ -41,6 +45,7 @@ app.get('/health', async (req, res) => {
 
 // Register HTTP route controllers
 app.use('/api/auth', authController);
+app.use('/api/users', userController);
 app.use('/api/rooms', roomController);
 app.use('/api/bookings', bookingController);
 app.use('/api/operations', operationsController);
@@ -66,4 +71,9 @@ const PORT = env.PORT;
 server.listen(PORT, () => {
   console.log(`🏨 H-Socket Distributed Manager running on port ${PORT}`);
   console.log(`📊 Health check available at http://localhost:${PORT}/health`);
+  
+  // Initialize cron service for automated maintenance tasks
+  console.log('⏰ Initializing cron service...');
+  cronService.startCleanupJob();
+  console.log('✅ Cron service initialized successfully');
 });

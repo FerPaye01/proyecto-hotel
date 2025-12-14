@@ -85,7 +85,7 @@ describe('Property 7: Room creation with broadcast', () => {
           // Generate unique room number for each test
           roomData.number = generateUniqueRoomNumber();
           // Execute: Create room using room service
-          const createdRoom = await roomService.createRoom(testActorId, roomData);
+          const createdRoom = await roomService.createRoom(testActorId, 'admin', roomData);
 
           // Property 1: Room must be created and returned
           expect(createdRoom).toBeDefined();
@@ -170,7 +170,7 @@ describe('Property 7: Room creation with broadcast', () => {
 
           if (isValid) {
             // Should succeed
-            const createdRoom = await roomService.createRoom(testActorId, roomData);
+            const createdRoom = await roomService.createRoom(testActorId, 'admin', roomData);
             expect(createdRoom).toBeDefined();
             expect(createdRoom.number).toBe(roomData.number);
             
@@ -178,7 +178,7 @@ describe('Property 7: Room creation with broadcast', () => {
           } else {
             // Should throw error
             await expect(
-              roomService.createRoom(testActorId, roomData)
+              roomService.createRoom(testActorId, 'admin', roomData)
             ).rejects.toThrow();
           }
         }
@@ -206,13 +206,13 @@ describe('Property 7: Room creation with broadcast', () => {
           initialRoom.number = generateUniqueRoomNumber();
           
           // Setup: Create initial room
-          const createdRoom = await roomService.createRoom(testActorId, initialRoom);
+          const createdRoom = await roomService.createRoom(testActorId, 'admin', initialRoom);
           
           // Clear audit logs from creation
           await pool.query('DELETE FROM audit_logs WHERE action = $1', ['CREATE_ROOM']);
 
           // Execute: Update room
-          const updatedRoom = await roomService.updateRoom(testActorId, createdRoom.id, updates);
+          const updatedRoom = await roomService.updateRoom(testActorId, 'admin', createdRoom.id, updates);
 
           // Property 1: Room must be updated in database
           expect(updatedRoom).toBeDefined();
@@ -309,7 +309,7 @@ describe('Property 12: Availability filtering', () => {
           const createdRooms = [];
           for (const roomData of roomsData) {
             try {
-              const room = await roomService.createRoom(testActorId, roomData);
+              const room = await roomService.createRoom(testActorId, 'admin', roomData);
               createdRooms.push(room);
             } catch (error) {
               // Skip duplicate room numbers
@@ -373,7 +373,7 @@ describe('Property 12: Availability filtering', () => {
           const createdRooms = [];
           for (const roomData of roomsData) {
             try {
-              const room = await roomService.createRoom(testActorId, roomData);
+              const room = await roomService.createRoom(testActorId, 'admin', roomData);
               createdRooms.push(room);
             } catch (error) {
               // Skip duplicate room numbers

@@ -173,7 +173,7 @@ describe('Property 1: Database-first consistency', () => {
           });
 
           // Execute: Create room
-          const createdRoom = await roomService.createRoom(testActorId, roomData);
+          const createdRoom = await roomService.createRoom(testActorId, 'admin', roomData);
 
           // Wait a bit for broadcast to arrive
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -218,7 +218,7 @@ describe('Property 1: Database-first consistency', () => {
             price_per_night: price,
             status: 'AVAILABLE'
           };
-          const room = await roomService.createRoom(testActorId, roomData);
+          const room = await roomService.createRoom(testActorId, 'admin', roomData);
 
           // Calculate dates
           const checkInDate = new Date();
@@ -246,7 +246,7 @@ describe('Property 1: Database-first consistency', () => {
           });
 
           // Execute: Create booking
-          const createdBooking = await bookingService.createBooking(testActorId, bookingData);
+          const createdBooking = await bookingService.createBooking(testActorId, 'client', bookingData);
 
           // Wait for broadcast
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -286,7 +286,7 @@ describe('Property 1: Database-first consistency', () => {
             price_per_night: price,
             status: 'AVAILABLE'
           };
-          const room = await roomService.createRoom(testActorId, roomData);
+          const room = await roomService.createRoom(testActorId, 'admin', roomData);
 
           const today = new Date().toISOString().split('T')[0];
           const tomorrow = new Date();
@@ -299,7 +299,7 @@ describe('Property 1: Database-first consistency', () => {
             check_in_date: today,
             check_out_date: tomorrowStr
           };
-          const booking = await bookingService.createBooking(testActorId, bookingData);
+          const booking = await bookingService.createBooking(testActorId, 'client', bookingData);
 
           // Track events
           let broadcastReceived = false;
@@ -314,7 +314,7 @@ describe('Property 1: Database-first consistency', () => {
           });
 
           // Execute: Check in
-          const result = await operationsService.checkIn(testStaffId, booking.id);
+          const result = await operationsService.checkIn(testStaffId, 'staff', booking.id);
 
           // Wait for broadcast
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -436,7 +436,7 @@ describe('Property 4: Client synchronization on connection', () => {
           const createdRooms = [];
           for (const roomData of roomsData) {
             roomData.number = generateUniqueRoomNumber();
-            const room = await roomService.createRoom(testActorId, roomData);
+            const room = await roomService.createRoom(testActorId, 'admin', roomData);
             createdRooms.push(room);
           }
 
