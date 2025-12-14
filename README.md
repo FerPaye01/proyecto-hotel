@@ -181,22 +181,27 @@ BCRYPT_ROUNDS=10
 
 ### 4. Run Database Migrations
 
-Execute the migration scripts in order:
+Execute all migrations automatically:
+
+```bash
+npm run migrate
+```
+
+This will apply all migration files in order:
+- 001_create_users.sql
+- 002_create_rooms.sql
+- 003_create_bookings.sql
+- 004_create_audit_logs.sql
+- 005_enhance_schema_for_system_user.sql
+
+Or manually with psql:
 
 ```bash
 psql $DATABASE_URL -f migrations/001_create_users.sql
 psql $DATABASE_URL -f migrations/002_create_rooms.sql
 psql $DATABASE_URL -f migrations/003_create_bookings.sql
 psql $DATABASE_URL -f migrations/004_create_audit_logs.sql
-```
-
-Or on Windows:
-
-```cmd
-psql -d hotel_management -f migrations/001_create_users.sql
-psql -d hotel_management -f migrations/002_create_rooms.sql
-psql -d hotel_management -f migrations/003_create_bookings.sql
-psql -d hotel_management -f migrations/004_create_audit_logs.sql
+psql $DATABASE_URL -f migrations/005_enhance_schema_for_system_user.sql
 ```
 
 ### 5. Seed Initial Data
@@ -642,6 +647,53 @@ CREATE TABLE audit_logs (
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+## Database Queries from Terminal
+
+### Quick Database Verification
+
+Run the automated verification script:
+
+```bash
+node scripts/verify-task1.js
+```
+
+This will check:
+- ✅ System user exists
+- ✅ updated_at column exists
+- ✅ Role constraint includes 'system'
+- ✅ Audit log immutability rules
+- ✅ Trigger for updated_at
+- ✅ User distribution by role
+
+### Execute Custom SQL Queries
+
+Use the query tool to run any SQL query:
+
+```bash
+node scripts/query-db.js "YOUR_SQL_QUERY_HERE"
+```
+
+**Examples:**
+
+```bash
+# View system user
+node scripts/query-db.js "SELECT * FROM users WHERE role = 'system'"
+
+# Count users by role
+node scripts/query-db.js "SELECT role, COUNT(*) as total FROM users GROUP BY role"
+
+# View recent audit logs
+node scripts/query-db.js "SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 10"
+
+# View all rooms
+node scripts/query-db.js "SELECT * FROM rooms ORDER BY number"
+
+# View recent bookings
+node scripts/query-db.js "SELECT * FROM bookings ORDER BY created_at DESC LIMIT 10"
+```
+
+**See `CONSULTAS_DB.txt` for more query examples.**
 
 ## Testing
 

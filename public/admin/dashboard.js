@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeForms();
     
     // Load initial data
+    loadUsers();
     loadRooms();
     loadAuditLogs();
     loadReports();
@@ -77,6 +78,8 @@ function initializeTabs() {
                 loadReports();
             } else if (tabName === 'rooms') {
                 loadRooms();
+            } else if (tabName === 'users') {
+                loadUsers();
             }
         });
     });
@@ -90,9 +93,149 @@ function initializeForms() {
     const userForm = document.getElementById('create-user-form');
     userForm.addEventListener('submit', handleCreateUser);
     
+    // User edit form
+    const editUserForm = document.getElementById('edit-user-form');
+    editUserForm.addEventListener('submit', handleEditUser);
+    
     // Room creation form
     const roomForm = document.getElementById('create-room-form');
     roomForm.addEventListener('submit', handleCreateRoom);
+}
+
+/**
+ * Load and display users list
+ */
+async function loadUsers() {
+    const loadingEl = document.getElementById('users-loading');
+    const listEl = document.getElementById('users-list');
+    const tableBody = document.getElementById('users-table-body');
+    
+    loadingEl.style.display = 'block';
+    listEl.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/users`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const users = data.users || [];
+            renderUsersTable(users, tableBody);
+            loadingEl.style.display = 'none';
+            listEl.style.display = 'block';
+        } else {
+            console.error('Error loading users');
+            loadingEl.textContent = 'Error al cargar usuarios';
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        loadingEl.textContent = 'Error de conexión';
+    }
+}
+
+/**
+ * Render users table
+ */
+function renderUsersTable(users, tableBody) {
+    tableBody.innerHTML = '';
+    
+    if (users.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay usuarios registrados</td></tr>';
+        return;
+    }
+    
+    const currentUser = getCurrentUser();
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        const isCurrentUser = currentUser && currentUser.id === user.id;
+        
+        row.innerHTML = `
+            <td>${escapeHtml(user.email)}</td>
+            <td>${escapeHtml(user.full_name)}</td>
+            <td><span class="badge badge-${user.role}">${user.role}</span></td>
+            <td>
+                <button class="btn-edit" onclick="openEditUserModal('${user.id}', '${escapeHtml(user.email)}', '${escapeHtml(user.full_name)}', '${user.role}')">
+                    ${isCurrentUser ? 'Editar (Tú)' : 'Editar'}
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+/**
+ * Open edit user modal
+ */
+function openEditUserModal(userId, email, fullName, role) {
+    document.getElementById('edit-user-id').value = userId;
+    document.getElementById('edit-user-email').value = email;
+    document.getElementById('edit-user-fullname').value = fullName;
+    document.getElementById('edit-user-role').value = role;
+    
+    const modal = document.getElementById('edit-user-modal');
+    modal.classList.add('show');
+    
+    // Clear any previous messages
+    const messageEl = document.getElementById('edit-user-message');
+    messageEl.classList.remove('show');
+}
+
+/**
+ * Close edit user modal
+ */
+function closeEditUserModal() {
+    const modal = document.getElementById('edit-user-modal');
+    modal.classList.remove('show');
+}
+
+/**
+ * Handle user edit form submission
+ */
+async function handleEditUser(event) {
+    event.preventDefault();
+    
+    const userId = document.getElementById('edit-user-id').value;
+    const email = document.getElementById('edit-user-email').value;
+    const fullName = document.getElementById('edit-user-fullname').value;
+    const role = document.getElementById('edit-user-role').value;
+    
+    const messageEl = document.getElementById('edit-user-message');
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                email,
+                full_name: fullName,
+                role
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(messageEl, 'success', 'Usuario actualizado exitosamente');
+            setTimeout(() => {
+                closeEditUserModal();
+                loadUsers(); // Reload users list
+            }, 1500);
+        } else {
+            showMessage(messageEl, 'error', data.message || 'Error al actualizar usuario');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showMessage(messageEl, 'error', 'Error de conexión al actualizar usuario');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar Cambios';
+    }
 }
 
 /**
@@ -129,6 +272,7 @@ async function handleCreateUser(event) {
         if (response.ok) {
             showMessage(messageEl, 'success', `Usuario creado exitosamente: ${email}`);
             event.target.reset();
+            loadUsers(); // Reload users list
         } else {
             showMessage(messageEl, 'error', data.message || 'Error al crear usuario');
         }

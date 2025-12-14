@@ -1,0 +1,101 @@
+═══════════════════════════════════════════════════════════════════
+  GUÍA DE CONSULTAS SQL DESDE TERMINAL
+═══════════════════════════════════════════════════════════════════
+
+📌 COMANDO BÁSICO:
+   node scripts/query-db.js "TU_CONSULTA_SQL_AQUÍ"
+
+═══════════════════════════════════════════════════════════════════
+  CONSULTAS PARA VERIFICAR LA TAREA 1
+═══════════════════════════════════════════════════════════════════
+
+1️⃣ VER EL USUARIO DEL SISTEMA:
+   node scripts/query-db.js "SELECT * FROM users WHERE role = 'system'"
+
+2️⃣ VER TODOS LOS USUARIOS POR ROL:
+   node scripts/query-db.js "SELECT COUNT(*) as total, role FROM users GROUP BY role"
+
+3️⃣ VERIFICAR COLUMNA UPDATED_AT:
+   node scripts/query-db.js "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'updated_at'"
+
+4️⃣ VER REGLAS DE INMUTABILIDAD:
+   node scripts/query-db.js "SELECT rulename, tablename FROM pg_rules WHERE tablename = 'audit_logs'"
+
+5️⃣ VER CONSTRAINT DE ROLES:
+   node scripts/query-db.js "SELECT conname, pg_get_constraintdef(oid) as definition FROM pg_constraint WHERE conname = 'users_role_check'"
+
+═══════════════════════════════════════════════════════════════════
+  CONSULTAS ÚTILES GENERALES
+═══════════════════════════════════════════════════════════════════
+
+📊 VER TODOS LOS USUARIOS:
+   node scripts/query-db.js "SELECT id, email, role, full_name, created_at FROM users ORDER BY created_at DESC LIMIT 10"
+
+📊 VER TODAS LAS HABITACIONES:
+   node scripts/query-db.js "SELECT * FROM rooms ORDER BY number"
+
+📊 VER RESERVAS RECIENTES:
+   node scripts/query-db.js "SELECT * FROM bookings ORDER BY created_at DESC LIMIT 10"
+
+📊 VER LOGS DE AUDITORÍA:
+   node scripts/query-db.js "SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 10"
+
+📊 CONTAR REGISTROS EN CADA TABLA:
+   node scripts/query-db.js "SELECT 'users' as tabla, COUNT(*) as total FROM users UNION ALL SELECT 'rooms', COUNT(*) FROM rooms UNION ALL SELECT 'bookings', COUNT(*) FROM bookings UNION ALL SELECT 'audit_logs', COUNT(*) FROM audit_logs"
+
+═══════════════════════════════════════════════════════════════════
+  VERIFICACIÓN COMPLETA AUTOMATIZADA
+═══════════════════════════════════════════════════════════════════
+
+🔍 EJECUTAR TODOS LOS TESTS DE LA TAREA 1:
+   node scripts/verify-task1.js
+
+   Este script ejecuta 6 tests automáticos:
+   ✅ Verifica que existe el usuario del sistema
+   ✅ Verifica que existe la columna updated_at
+   ✅ Verifica que el constraint incluye 'system'
+   ✅ Verifica las reglas de inmutabilidad
+   ✅ Verifica el trigger de updated_at
+   ✅ Muestra estadísticas de usuarios
+
+═══════════════════════════════════════════════════════════════════
+  NOTAS IMPORTANTES
+═══════════════════════════════════════════════════════════════════
+
+⚠️  COMILLAS: Usa comillas dobles para la consulta completa
+   ✅ Correcto: node scripts/query-db.js "SELECT * FROM users"
+   ❌ Incorrecto: node scripts/query-db.js SELECT * FROM users
+
+⚠️  COMILLAS SIMPLES DENTRO: Para valores de texto, usa comillas simples escapadas
+   ✅ Correcto: node scripts/query-db.js "SELECT * FROM users WHERE role = 'admin'"
+   
+⚠️  LÍMITES: Usa LIMIT para evitar resultados muy grandes
+   ✅ Recomendado: node scripts/query-db.js "SELECT * FROM users LIMIT 10"
+
+═══════════════════════════════════════════════════════════════════
+  RESULTADOS DE LA VERIFICACIÓN
+═══════════════════════════════════════════════════════════════════
+
+✅ Usuario del sistema creado:
+   • Email: system@internal
+   • Role: system
+   • Password: LOCKED (no puede hacer login)
+   • ID: e014c321-5c26-4ae2-8f2f-9abd707da1e6
+
+✅ Columna updated_at agregada a la tabla users
+
+✅ Constraint de roles actualizado para incluir 'system'
+
+✅ Reglas de inmutabilidad creadas:
+   • audit_logs_no_update (previene UPDATE)
+   • audit_logs_no_delete (previene DELETE)
+
+✅ Trigger automático para actualizar updated_at
+
+✅ Distribución actual de usuarios:
+   • admin: 31 usuarios
+   • client: 39 usuarios
+   • staff: 19 usuarios
+   • system: 1 usuario
+
+═══════════════════════════════════════════════════════════════════
