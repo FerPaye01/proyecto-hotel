@@ -145,7 +145,7 @@ function renderUsersTable(users, tableBody) {
         return;
     }
     
-    const currentUser = getCurrentUser();
+    const currentUser = getUser();
     
     users.forEach(user => {
         const row = document.createElement('tr');
@@ -482,7 +482,7 @@ async function loadReports() {
     contentEl.style.display = 'none';
     
     try {
-        const response = await fetch(`${API_BASE}/admin/reports/occupancy`, {
+        const response = await fetch(`${API_BASE}/admin/reports/financial`, {
             headers: getAuthHeaders()
         });
         

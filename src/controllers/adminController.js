@@ -9,7 +9,7 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const Booking = require('../models/Booking');
 const { authenticateJWT } = require('../middleware/auth');
-const { requireRole } = require('../middleware/rbac');
+const { requireRole, preventNonAdminAdminCreation } = require('../middleware/rbac');
 const { hashPassword } = require('../utils/password');
 const { validateEmail } = require('../utils/validators');
 
@@ -190,10 +190,87 @@ router.get('/users', authenticateJWT, requireRole('admin'), async (req, res, nex
 });
 
 /**
+ * PUT /api/admin/users/:id
+ * Update a user (admin only)
+ * Requirements: 4.1, 12.1
+ */
+router.put('/users/:id', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { email, role, full_name } = req.body;
+    const actorId = req.user.id;
+
+    // Check if trying to modify own role
+    if (id === actorId && role !== undefined) {
+      return res.status(403).json({
+        error: 'AUTHORIZATION_ERROR',
+        message: 'Cannot modify your own role'
+      });
+    }
+
+    // Validate role if provided
+    if (role !== undefined) {
+      const validRoles = ['admin', 'staff', 'client'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          message: 'Role must be one of: admin, staff, client',
+          field: 'role'
+        });
+      }
+    }
+
+    // Validate email if provided
+    if (email !== undefined) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          message: emailValidation.error,
+          field: 'email'
+        });
+      }
+    }
+
+    // Check if user exists
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'User not found'
+      });
+    }
+
+    // Build update object
+    const updates = {};
+    if (email !== undefined) updates.email = email;
+    if (role !== undefined) updates.role = role;
+    if (full_name !== undefined) updates.full_name = full_name;
+
+    // Update user
+    const updatedUser = await User.update(id, updates);
+
+    // Return updated user
+    res.status(200).json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        full_name: updatedUser.full_name,
+        updated_at: updatedUser.updated_at
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/admin/users
  * Create a new user (admin only)
+ * Requirements: 1.2, 4.1, 12.2
  */
-router.post('/users', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+router.post('/users', authenticateJWT, requireRole('admin'), preventNonAdminAdminCreation, async (req, res, next) => {
   try {
     const { email, password, role, full_name } = req.body;
 
