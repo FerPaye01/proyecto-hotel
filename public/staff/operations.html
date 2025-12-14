@@ -343,38 +343,38 @@
 </head>
 <body>
     <div class="header">
-        <h1>🏨 Staff Operations Dashboard</h1>
+        <h1>🏨 Panel de Operaciones - Recepción</h1>
         <div class="header-actions">
-            <span class="user-info" id="userInfo">Loading...</span>
-            <button class="btn btn-logout" onclick="logout()">Logout</button>
+            <span class="user-info" id="userInfo">Cargando...</span>
+            <button class="btn btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </div>
 
     <div class="dashboard-container">
         <div class="dashboard-title">
-            <h2>Room Status - Real-time View</h2>
+            <h2>Estado de Habitaciones - Vista en Tiempo Real</h2>
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-color available"></div>
-                    <span>Available</span>
+                    <span>Disponible</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color occupied"></div>
-                    <span>Occupied</span>
+                    <span>Ocupada</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color cleaning"></div>
-                    <span>Cleaning</span>
+                    <span>Limpieza</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color maintenance"></div>
-                    <span>Maintenance</span>
+                    <span>Mantenimiento</span>
                 </div>
             </div>
         </div>
 
         <div id="roomGrid" class="room-grid">
-            <div class="loading">Loading rooms...</div>
+            <div class="loading">Cargando habitaciones...</div>
         </div>
     </div>
 
@@ -382,25 +382,25 @@
     <div id="checkinModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Check-in Guest</h2>
+                <h2>Registrar Entrada (Check-in)</h2>
                 <button class="close-btn" onclick="closeCheckinModal()">&times;</button>
             </div>
             <div class="error-message" id="checkinError"></div>
             <div class="success-message" id="checkinSuccess"></div>
             <form id="checkinForm" onsubmit="handleCheckin(event)">
                 <div class="form-group">
-                    <label for="bookingId">Booking ID *</label>
+                    <label for="bookingId">ID de Reserva *</label>
                     <input 
                         type="text" 
                         id="bookingId" 
                         name="bookingId" 
-                        placeholder="Enter booking UUID"
+                        placeholder="Ingrese el UUID de la reserva"
                         required
                     />
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-cancel" onclick="closeCheckinModal()">Cancel</button>
-                    <button type="submit" class="btn btn-success">Check-in</button>
+                    <button type="button" class="btn btn-cancel" onclick="closeCheckinModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar Entrada</button>
                 </div>
             </form>
         </div>
@@ -410,21 +410,21 @@
     <div id="checkoutModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Check-out Guest</h2>
+                <h2>Registrar Salida (Check-out)</h2>
                 <button class="close-btn" onclick="closeCheckoutModal()">&times;</button>
             </div>
             <div class="error-message" id="checkoutError"></div>
             <div class="success-message" id="checkoutSuccess"></div>
             <form id="checkoutForm" onsubmit="handleCheckout(event)">
                 <div class="form-group">
-                    <label for="roomId">Room Number *</label>
+                    <label for="roomId">Número de Habitación *</label>
                     <select id="roomId" name="roomId" required>
-                        <option value="">Select a room</option>
+                        <option value="">Seleccione una habitación</option>
                     </select>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-cancel" onclick="closeCheckoutModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Check-out</button>
+                    <button type="button" class="btn btn-cancel" onclick="closeCheckoutModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Salida</button>
                 </div>
             </form>
         </div>

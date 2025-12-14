@@ -109,7 +109,7 @@ async function fetchRooms() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch rooms');
+            throw new Error('Error al cargar habitaciones');
         }
 
         const data = await response.json();
