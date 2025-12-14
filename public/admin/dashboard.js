@@ -145,11 +145,11 @@ function renderUsersTable(users, tableBody) {
         return;
     }
     
-    const currentUser = getUser();
+    const currentUserId = getUserId();
     
     users.forEach(user => {
         const row = document.createElement('tr');
-        const isCurrentUser = currentUser && currentUser.id === user.id;
+        const isCurrentUser = currentUserId && currentUserId === user.id;
         
         row.innerHTML = `
             <td>${escapeHtml(user.email)}</td>
