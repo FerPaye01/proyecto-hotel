@@ -753,6 +753,27 @@ function escapeHtml(text) {
 }
 
 /**
+ * Show specific report view
+ */
+function showReport(reportType) {
+    // Hide all report views
+    document.querySelectorAll('.report-view').forEach(view => {
+        view.style.display = 'none';
+    });
+    
+    // Show selected report view
+    const reportView = document.getElementById(`report-${reportType}`);
+    if (reportView) {
+        reportView.style.display = 'block';
+        
+        // Load data if not already loaded
+        if (reportType !== 'general') {
+            loadAuditReport(reportType);
+        }
+    }
+}
+
+/**
  * Toggle collapsible section
  */
 function toggleCollapsible(header) {
@@ -854,6 +875,7 @@ function renderTopUsersReport(logs) {
         return;
     }
     
+    // Render table
     sortedUsers.forEach(user => {
         const row = document.createElement('tr');
         const lastActivity = new Date(user.lastActivity);
@@ -880,6 +902,65 @@ function renderTopUsersReport(logs) {
         `;
         tbody.appendChild(row);
     });
+    
+    // Create bar chart
+    const barCtx = document.getElementById('top-users-chart');
+    if (barCtx) {
+        if (window.topUsersBarChart) window.topUsersBarChart.destroy();
+        window.topUsersBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedUsers.map(u => u.id === 'Sistema' ? 'Sistema' : u.id.substring(0, 8) + '...'),
+                datasets: [{
+                    label: 'Total de Acciones',
+                    data: sortedUsers.map(u => u.count),
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+    
+    // Create pie chart
+    const pieCtx = document.getElementById('top-users-pie-chart');
+    if (pieCtx) {
+        if (window.topUsersPieChart) window.topUsersPieChart.destroy();
+        window.topUsersPieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: sortedUsers.map(u => u.id === 'Sistema' ? 'Sistema' : u.id.substring(0, 8) + '...'),
+                datasets: [{
+                    data: sortedUsers.map(u => u.count),
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)',
+                        'rgba(237, 100, 166, 0.8)',
+                        'rgba(255, 154, 158, 0.8)',
+                        'rgba(255, 198, 128, 0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
 }
 
 /**
@@ -903,9 +984,16 @@ function renderCriticalChangesReport(logs) {
     
     if (criticalLogs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay cambios críticos en las últimas 24 horas</td></tr>';
+        
+        // Clear chart
+        const chartCtx = document.getElementById('critical-changes-chart');
+        if (chartCtx && window.criticalChangesChart) {
+            window.criticalChangesChart.destroy();
+        }
         return;
     }
     
+    // Render table
     criticalLogs.forEach(log => {
         const row = document.createElement('tr');
         const timestamp = new Date(log.timestamp).toLocaleString('es-ES');
@@ -919,6 +1007,45 @@ function renderCriticalChangesReport(logs) {
         `;
         tbody.appendChild(row);
     });
+    
+    // Create timeline chart (group by hour)
+    const hourCounts = {};
+    criticalLogs.forEach(log => {
+        const hour = new Date(log.timestamp).getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    
+    const hours = Object.keys(hourCounts).sort((a, b) => a - b);
+    const counts = hours.map(h => hourCounts[h]);
+    
+    const chartCtx = document.getElementById('critical-changes-chart');
+    if (chartCtx) {
+        if (window.criticalChangesChart) window.criticalChangesChart.destroy();
+        window.criticalChangesChart = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: hours.map(h => `${h}:00`),
+                datasets: [{
+                    label: 'Cambios Críticos por Hora',
+                    data: counts,
+                    borderColor: 'rgba(237, 100, 166, 1)',
+                    backgroundColor: 'rgba(237, 100, 166, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
 }
 
 /**
@@ -953,9 +1080,14 @@ function renderActivityByTypeReport(logs) {
     
     if (sortedActions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">No hay datos en los últimos 30 días</td></tr>';
+        
+        // Clear charts
+        if (window.activityBarChart) window.activityBarChart.destroy();
+        if (window.activityDoughnutChart) window.activityDoughnutChart.destroy();
         return;
     }
     
+    // Render table
     sortedActions.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -965,6 +1097,78 @@ function renderActivityByTypeReport(logs) {
         `;
         tbody.appendChild(row);
     });
+    
+    // Create bar chart
+    const barCtx = document.getElementById('activity-by-type-bar-chart');
+    if (barCtx) {
+        if (window.activityBarChart) window.activityBarChart.destroy();
+        window.activityBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedActions.map(a => a.action),
+                datasets: [{
+                    label: 'Cantidad de Operaciones',
+                    data: sortedActions.map(a => a.count),
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+    }
+    
+    // Create doughnut chart
+    const doughnutCtx = document.getElementById('activity-by-type-doughnut-chart');
+    if (doughnutCtx) {
+        if (window.activityDoughnutChart) window.activityDoughnutChart.destroy();
+        
+        const colors = [
+            'rgba(102, 126, 234, 0.8)',
+            'rgba(118, 75, 162, 0.8)',
+            'rgba(237, 100, 166, 0.8)',
+            'rgba(255, 154, 158, 0.8)',
+            'rgba(255, 198, 128, 0.8)',
+            'rgba(134, 239, 172, 0.8)',
+            'rgba(96, 165, 250, 0.8)',
+            'rgba(251, 146, 60, 0.8)'
+        ];
+        
+        window.activityDoughnutChart = new Chart(doughnutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: sortedActions.map(a => a.action),
+                datasets: [{
+                    data: sortedActions.map(a => a.count),
+                    backgroundColor: colors.slice(0, sortedActions.length),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 /**
