@@ -303,15 +303,33 @@ async function handleCreateRoom(event) {
     submitBtn.textContent = 'Creando...';
     
     try {
+        // Process images
+        const image1File = document.getElementById('room-image-1').files[0];
+        const image2File = document.getElementById('room-image-2').files[0];
+        const image3File = document.getElementById('room-image-3').files[0];
+        
+        const roomData = {
+            number,
+            type,
+            price_per_night: price,
+            status
+        };
+        
+        // Convert images to base64 if provided
+        if (image1File) {
+            roomData.image_1 = await fileToBase64(image1File);
+        }
+        if (image2File && type === 'suite') {
+            roomData.image_2 = await fileToBase64(image2File);
+        }
+        if (image3File && type === 'suite') {
+            roomData.image_3 = await fileToBase64(image3File);
+        }
+        
         const response = await fetch(`${API_BASE}/rooms`, {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({
-                number,
-                type,
-                price_per_night: price,
-                status
-            })
+            body: JSON.stringify(roomData)
         });
         
         const data = await response.json();
@@ -319,6 +337,10 @@ async function handleCreateRoom(event) {
         if (response.ok) {
             showMessage(messageEl, 'success', `Habitación ${number} creada exitosamente`);
             event.target.reset();
+            // Clear image previews
+            document.getElementById('preview-1').style.display = 'none';
+            document.getElementById('preview-2').style.display = 'none';
+            document.getElementById('preview-3').style.display = 'none';
             // Reload rooms list
             loadRooms();
         } else {
@@ -383,6 +405,11 @@ function renderRoomsTable(roomsData, tableBody) {
             <td>${escapeHtml(room.type)}</td>
             <td>$${parseFloat(room.price_per_night).toFixed(2)}</td>
             <td><span class="badge badge-${room.status.toLowerCase()}">${room.status}</span></td>
+            <td>
+                <button class="btn-edit" onclick="openEditPricingModal(${room.id}, '${escapeHtml(room.number)}', '${room.type}', ${room.price_per_night})" title="Editar precio y tipo">
+                    ✏️ Editar
+                </button>
+            </td>
         `;
         tableBody.appendChild(row);
     });
@@ -1396,4 +1423,144 @@ function getChartsForReport(reportName) {
     }
     
     return charts;
+}
+
+
+// Open edit pricing modal
+function openEditPricingModal(roomId, roomNumber, roomType, currentPrice) {
+    const modal = document.getElementById('edit-pricing-modal');
+    if (modal) {
+        modal.classList.add('show');
+        
+        // Set form values
+        document.getElementById('pricing-room-id').value = roomId;
+        document.getElementById('pricing-room-number').value = `Habitación ${roomNumber}`;
+        document.getElementById('pricing-type').value = roomType;
+        document.getElementById('pricing-price').value = parseFloat(currentPrice).toFixed(2);
+        
+        // Clear messages
+        const messageEl = document.getElementById('pricing-message');
+        if (messageEl) {
+            messageEl.textContent = '';
+            messageEl.className = 'message';
+        }
+    }
+}
+
+// Close edit pricing modal
+function closeEditPricingModal() {
+    const modal = document.getElementById('edit-pricing-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Handle edit pricing form submission
+async function handleEditPricing(event) {
+    event.preventDefault();
+    
+    const roomId = document.getElementById('pricing-room-id').value;
+    const type = document.getElementById('pricing-type').value;
+    const price = parseFloat(document.getElementById('pricing-price').value);
+    
+    const messageEl = document.getElementById('pricing-message');
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            throw new Error('No hay sesión activa');
+        }
+        
+        const response = await fetch(`/api/rooms/${roomId}/pricing`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                type: type,
+                price_per_night: price
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al actualizar el precio');
+        }
+        
+        // Show success message
+        if (messageEl) {
+            messageEl.textContent = 'Precio actualizado exitosamente';
+            messageEl.className = 'message success';
+        }
+        
+        // Update room in local array
+        const roomIndex = rooms.findIndex(r => r.id === parseInt(roomId));
+        if (roomIndex !== -1) {
+            rooms[roomIndex] = data.room;
+        }
+        
+        // Re-render rooms table
+        const tableBody = document.getElementById('rooms-table-body');
+        renderRoomsTable(rooms, tableBody);
+        
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+            closeEditPricingModal();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error updating pricing:', error);
+        if (messageEl) {
+            messageEl.textContent = error.message || 'Error al actualizar el precio';
+            messageEl.className = 'message error';
+        }
+    }
+}
+
+
+// Show/hide image fields based on room type
+document.getElementById('room-type')?.addEventListener('change', function() {
+    const type = this.value;
+    const image2Group = document.getElementById('image-2-group');
+    const image3Group = document.getElementById('image-3-group');
+    
+    if (type === 'suite') {
+        image2Group.style.display = 'block';
+        image3Group.style.display = 'block';
+    } else {
+        image2Group.style.display = 'none';
+        image3Group.style.display = 'none';
+        // Clear suite images if switching from suite to other type
+        document.getElementById('room-image-2').value = '';
+        document.getElementById('room-image-3').value = '';
+        document.getElementById('preview-2').style.display = 'none';
+        document.getElementById('preview-3').style.display = 'none';
+    }
+});
+
+// Preview image before upload
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Convert image file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }

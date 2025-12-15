@@ -430,6 +430,39 @@
         </div>
     </div>
 
+    <!-- Change Room Status Modal -->
+    <div id="changeStatusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Cambiar Estado de Habitación</h2>
+                <button class="close-btn" onclick="closeChangeStatusModal()">&times;</button>
+            </div>
+            <div class="error-message" id="statusError"></div>
+            <div class="success-message" id="statusSuccess"></div>
+            <form id="changeStatusForm" onsubmit="handleChangeStatus(event)">
+                <div class="form-group">
+                    <label>Habitación</label>
+                    <input type="text" id="statusRoomNumber" readonly style="background: #f5f5f5;" />
+                    <input type="hidden" id="statusRoomId" />
+                </div>
+                <div class="form-group">
+                    <label for="newStatus">Nuevo Estado *</label>
+                    <select id="newStatus" name="newStatus" required>
+                        <option value="">Seleccione un estado</option>
+                        <option value="AVAILABLE">Disponible</option>
+                        <option value="OCCUPIED">Ocupada</option>
+                        <option value="CLEANING">En Limpieza</option>
+                        <option value="MAINTENANCE">En Mantenimiento</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeChangeStatusModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Cambiar Estado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/socketClient.js"></script>

@@ -78,15 +78,18 @@ class Room {
    * @param {string} roomData.type - Room type (simple, doble, suite)
    * @param {number} roomData.price_per_night - Price per night
    * @param {string} roomData.status - Room status (AVAILABLE, OCCUPIED, MAINTENANCE, CLEANING)
+   * @param {string} [roomData.image_1] - Primary image (base64 or URL)
+   * @param {string} [roomData.image_2] - Second image for suites (base64 or URL)
+   * @param {string} [roomData.image_3] - Third image for suites (base64 or URL)
    * @returns {Promise<Object>} Created room object
    */
-  static async create({ number, type, price_per_night, status = 'AVAILABLE' }) {
+  static async create({ number, type, price_per_night, status = 'AVAILABLE', image_1, image_2, image_3 }) {
     const query = `
-      INSERT INTO rooms (number, type, price_per_night, status)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO rooms (number, type, price_per_night, status, image_1, image_2, image_3)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
-    const result = await pool.query(query, [number, type, price_per_night, status]);
+    const result = await pool.query(query, [number, type, price_per_night, status, image_1 || null, image_2 || null, image_3 || null]);
     return result.rows[0];
   }
 
@@ -97,7 +100,7 @@ class Room {
    * @returns {Promise<Object|null>} Updated room object or null if not found
    */
   static async update(id, updates) {
-    const allowedFields = ['number', 'type', 'price_per_night', 'status'];
+    const allowedFields = ['number', 'type', 'price_per_night', 'status', 'image_1', 'image_2', 'image_3'];
     const fields = [];
     const values = [];
     let paramIndex = 1;

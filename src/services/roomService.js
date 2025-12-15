@@ -28,6 +28,9 @@ function setSocketIO(socketIo) {
  * @param {string} roomData.type - Room type (simple, doble, suite)
  * @param {number} roomData.price_per_night - Price per night
  * @param {string} roomData.status - Room status (AVAILABLE, OCCUPIED, MAINTENANCE, CLEANING)
+ * @param {string} [roomData.image_1] - Primary image (base64 or URL)
+ * @param {string} [roomData.image_2] - Second image for suites (base64 or URL)
+ * @param {string} [roomData.image_3] - Third image for suites (base64 or URL)
  * @returns {Promise<Object>} Created room object
  * @throws {Error} If authorization fails or validation fails
  */
@@ -40,7 +43,7 @@ async function createRoom(actorId, actorRole, roomData) {
     throw error;
   }
 
-  const { number, type, price_per_night, status = 'AVAILABLE' } = roomData;
+  const { number, type, price_per_night, status = 'AVAILABLE', image_1, image_2, image_3 } = roomData;
 
   // Validate room data
   if (!number || typeof number !== 'string') {
@@ -71,7 +74,10 @@ async function createRoom(actorId, actorRole, roomData) {
     number,
     type,
     price_per_night,
-    status
+    status,
+    image_1,
+    image_2,
+    image_3
   });
 
   // Log the action to audit trail

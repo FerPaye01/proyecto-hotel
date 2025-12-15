@@ -152,23 +152,14 @@ function createRoomCard(room) {
     `;
 }
 
-// Handle room card click
+// Handle room card click - Now opens status change modal
 function handleRoomClick(roomId, status) {
-    const statusTranslations = {
-        'CLEANING': 'LIMPIEZA',
-        'MAINTENANCE': 'MANTENIMIENTO'
-    };
+    // Find the room data
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
     
-    if (status === 'OCCUPIED') {
-        // Open check-out modal
-        openCheckoutModal(roomId);
-    } else if (status === 'AVAILABLE') {
-        // Open check-in modal
-        openCheckinModal();
-    } else {
-        // For CLEANING or MAINTENANCE, just show info
-        alert(`La habitación está actualmente en estado ${statusTranslations[status] || status}. No hay acciones disponibles.`);
-    }
+    // Open the change status modal
+    openChangeStatusModal(room);
 }
 
 // Update a single room in the grid
@@ -380,5 +371,80 @@ window.onclick = function(event) {
     }
     if (event.target === checkoutModal) {
         closeCheckoutModal();
+    }
+}
+
+
+// Open change status modal
+function openChangeStatusModal(room) {
+    const modal = document.getElementById('changeStatusModal');
+    if (modal) {
+        modal.classList.add('active');
+        
+        // Set room info
+        document.getElementById('statusRoomNumber').value = `${room.number} - ${room.type}`;
+        document.getElementById('statusRoomId').value = room.id;
+        document.getElementById('newStatus').value = room.status;
+        
+        hideMessage('statusError');
+        hideMessage('statusSuccess');
+    }
+}
+
+// Close change status modal
+function closeChangeStatusModal() {
+    const modal = document.getElementById('changeStatusModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Handle change status form submission
+async function handleChangeStatus(event) {
+    event.preventDefault();
+    
+    const roomId = document.getElementById('statusRoomId').value;
+    const newStatus = document.getElementById('newStatus').value;
+    
+    hideMessage('statusError');
+    hideMessage('statusSuccess');
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            throw new Error('No hay sesión activa');
+        }
+        
+        const response = await fetch(`/api/rooms/${roomId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al cambiar el estado');
+        }
+        
+        // Show success message
+        showMessage('statusSuccess', `Estado cambiado exitosamente a ${newStatus}`);
+        
+        // Update room in grid
+        if (data.room) {
+            updateRoomInGrid(data.room);
+        }
+        
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+            closeChangeStatusModal();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error changing room status:', error);
+        showMessage('statusError', error.message || 'Error al cambiar el estado');
     }
 }
