@@ -208,7 +208,7 @@ async function handleEditUser(event) {
     submitBtn.textContent = 'Guardando...';
     
     try {
-        const response = await fetch(`${API_BASE}/admin/users/${userId}`, {
+        const response = await fetch(`${API_BASE}/users/${userId}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify({
