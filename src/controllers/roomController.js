@@ -170,13 +170,13 @@ router.put('/:id/pricing', authenticateJWT, requireRole('admin'), async (req, re
       });
     }
 
-    const { price_per_night, type } = req.body;
+    const { price_per_night, type, image_1, image_2, image_3 } = req.body;
 
     // Validate at least one pricing field is provided
-    if (price_per_night === undefined && type === undefined) {
+    if (price_per_night === undefined && type === undefined && image_1 === undefined && image_2 === undefined && image_3 === undefined) {
       return res.status(400).json({
         error: 'VALIDATION_ERROR',
-        message: 'At least one pricing field (price_per_night or type) is required'
+        message: 'At least one pricing field (price_per_night, type, or images) is required'
       });
     }
 
@@ -184,6 +184,9 @@ router.put('/:id/pricing', authenticateJWT, requireRole('admin'), async (req, re
     const pricing = {};
     if (price_per_night !== undefined) pricing.price_per_night = price_per_night;
     if (type !== undefined) pricing.type = type;
+    if (image_1 !== undefined) pricing.image_1 = image_1;
+    if (image_2 !== undefined) pricing.image_2 = image_2;
+    if (image_3 !== undefined) pricing.image_3 = image_3;
 
     // Call roomService.updateRoomPricing
     const room = await roomService.updateRoomPricing(
