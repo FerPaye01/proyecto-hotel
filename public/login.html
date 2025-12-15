@@ -199,8 +199,9 @@
                     throw new Error(data.message || 'Error al iniciar sesión');
                 }
 
-                // Store JWT token in localStorage
+                // Store JWT token and user info in localStorage
                 localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
 
                 // Redirect based on user role
                 const redirectUrl = data.redirectUrl || getRoleRedirect(data.user?.role);

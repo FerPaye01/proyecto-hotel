@@ -1705,29 +1705,50 @@ async function deleteRoom(roomId, roomNumber) {
  */
 
 // Open profile modal
-function openProfileModal() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) {
-        alert('No se pudo cargar la información del usuario');
-        return;
+async function openProfileModal() {
+    try {
+        const token = getToken();
+        if (!token) {
+            alert('No hay sesión activa');
+            return;
+        }
+        
+        // Fetch current user data from server
+        const response = await fetch(`${API_BASE}/users/me`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al cargar información del usuario');
+        }
+        
+        const user = data.user;
+        
+        // Populate form with current user data
+        document.getElementById('profile-email').value = user.email || '';
+        document.getElementById('profile-fullname').value = user.full_name || '';
+        document.getElementById('profile-role').value = user.role || '';
+        
+        // Clear password fields
+        document.getElementById('profile-current-password').value = '';
+        document.getElementById('profile-new-password').value = '';
+        
+        // Clear any previous messages
+        const message = document.getElementById('profile-message');
+        message.className = 'message';
+        message.textContent = '';
+        
+        // Show modal
+        document.getElementById('profile-modal').classList.add('show');
+        
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        alert('Error al cargar información del usuario: ' + error.message);
     }
-    
-    // Populate form with current user data
-    document.getElementById('profile-email').value = user.email || '';
-    document.getElementById('profile-fullname').value = user.full_name || '';
-    document.getElementById('profile-role').value = user.role || '';
-    
-    // Clear password fields
-    document.getElementById('profile-current-password').value = '';
-    document.getElementById('profile-new-password').value = '';
-    
-    // Clear any previous messages
-    const message = document.getElementById('profile-message');
-    message.className = 'message';
-    message.textContent = '';
-    
-    // Show modal
-    document.getElementById('profile-modal').classList.add('show');
 }
 
 // Close profile modal

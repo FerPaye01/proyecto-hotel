@@ -568,28 +568,49 @@ async function handleChangeStatus(event) {
  */
 
 // Open profile modal
-function openProfileModal() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) {
-        alert('No se pudo cargar la información del usuario');
-        return;
+async function openProfileModal() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('No hay sesión activa');
+            return;
+        }
+        
+        // Fetch current user data from server
+        const response = await fetch('/api/users/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al cargar información del usuario');
+        }
+        
+        const user = data.user;
+        
+        // Populate form with current user data
+        document.getElementById('profileEmail').value = user.email || '';
+        document.getElementById('profileFullname').value = user.full_name || '';
+        document.getElementById('profileRole').value = user.role || '';
+        
+        // Clear password fields
+        document.getElementById('profileCurrentPassword').value = '';
+        document.getElementById('profileNewPassword').value = '';
+        
+        // Clear any previous messages
+        document.getElementById('profileError').textContent = '';
+        document.getElementById('profileSuccess').textContent = '';
+        
+        // Show modal
+        document.getElementById('profileModal').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        alert('Error al cargar información del usuario: ' + error.message);
     }
-    
-    // Populate form with current user data
-    document.getElementById('profileEmail').value = user.email || '';
-    document.getElementById('profileFullname').value = user.full_name || '';
-    document.getElementById('profileRole').value = user.role || '';
-    
-    // Clear password fields
-    document.getElementById('profileCurrentPassword').value = '';
-    document.getElementById('profileNewPassword').value = '';
-    
-    // Clear any previous messages
-    document.getElementById('profileError').textContent = '';
-    document.getElementById('profileSuccess').textContent = '';
-    
-    // Show modal
-    document.getElementById('profileModal').style.display = 'flex';
 }
 
 // Close profile modal

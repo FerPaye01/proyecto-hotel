@@ -20,6 +20,31 @@ function setToken(token) {
 }
 
 /**
+ * Set user information in localStorage
+ * @param {object} user - The user object to store
+ */
+function setUser(user) {
+    localStorage.setItem('user', JSON.stringify(user));
+}
+
+/**
+ * Get user information from localStorage
+ * @returns {object|null} The user object or null if not found
+ */
+function getUser() {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+        return null;
+    }
+    try {
+        return JSON.parse(userStr);
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+    }
+}
+
+/**
  * Decode JWT token to extract payload
  * @param {string} token - The JWT token to decode
  * @returns {object|null} The decoded payload or null if invalid
@@ -97,6 +122,7 @@ function isAuthenticated() {
  */
 function logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     window.location.href = '/login.html';
 }
 
@@ -141,6 +167,8 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         getToken,
         setToken,
+        setUser,
+        getUser,
         getUserRole,
         getUserId,
         isAuthenticated,

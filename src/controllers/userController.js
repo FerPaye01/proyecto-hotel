@@ -103,6 +103,43 @@ router.put('/:id',
 );
 
 /**
+ * GET /api/users/me
+ * Get current user information
+ * Requirements: 5.4
+ */
+router.get('/me',
+  authenticateJWT,
+  async (req, res, next) => {
+    try {
+      // Get current user data
+      const user = await User.findById(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Usuario no encontrado'
+        });
+      }
+      
+      // Return user info (excluding password_hash)
+      res.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          full_name: user.full_name,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/users
  * Get list of all users (admin only)
  * Requirements: 4.1
