@@ -69,17 +69,18 @@ router.post('/login', async (req, res, next) => {
 
 /**
  * POST /api/auth/register
- * Register a new user
+ * Public registration endpoint - only allows client role
+ * Admin and staff accounts must be created by administrators
  */
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, role, full_name } = req.body;
+    const { email, password, full_name } = req.body;
 
     // Validate request body
-    if (!email || !password || !role || !full_name) {
+    if (!email || !password || !full_name) {
       return res.status(400).json({
         error: 'VALIDATION_ERROR',
-        message: 'Email, password, role, and full_name are required'
+        message: 'Email, password, and full_name are required'
       });
     }
 
@@ -93,16 +94,6 @@ router.post('/register', async (req, res, next) => {
       });
     }
 
-    // Validate role
-    const validRoles = ['admin', 'staff', 'client'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Role must be one of: admin, staff, client',
-        field: 'role'
-      });
-    }
-
     // Validate password length
     if (password.length < 6) {
       return res.status(400).json({
@@ -112,35 +103,29 @@ router.post('/register', async (req, res, next) => {
       });
     }
 
-    // Call auth service
+    // Validate full_name length
+    if (full_name.trim().length < 2) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Full name must be at least 2 characters long',
+        field: 'full_name'
+      });
+    }
+
+    // Force role to 'client' for public registration
+    // Admin and staff accounts must be created by administrators
     const result = await authService.register({
       email,
       password,
-      role,
+      role: 'client',
       full_name
     });
-
-    // Determine role-specific redirect URL
-    let redirectUrl;
-    switch (result.user.role) {
-      case 'admin':
-        redirectUrl = '/admin/dashboard.html';
-        break;
-      case 'staff':
-        redirectUrl = '/staff/operations.html';
-        break;
-      case 'client':
-        redirectUrl = '/client/booking.html';
-        break;
-      default:
-        redirectUrl = '/';
-    }
 
     // Return token, user info, and redirect URL
     res.status(201).json({
       token: result.token,
       user: result.user,
-      redirectUrl
+      redirectUrl: '/client/booking.html'
     });
   } catch (error) {
     // Pass error to global error handler

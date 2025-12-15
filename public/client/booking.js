@@ -85,11 +85,23 @@ function configurePublicMode(isPublic) {
             profileBtn.title = 'Inicia sesión para acceder a tu perfil';
         }
         
-        // Change logout button to login button
+        // Replace logout button with register and login buttons
         const logoutBtn = document.querySelector('button[onclick="logout()"]');
         if (logoutBtn) {
+            // Create register button
+            const registerBtn = document.createElement('button');
+            registerBtn.className = 'btn-logout';
+            registerBtn.textContent = 'Registrarse';
+            registerBtn.style.background = 'rgba(255, 255, 255, 0.3)';
+            registerBtn.style.marginRight = '10px';
+            registerBtn.onclick = () => window.location.href = '/register.html';
+            
+            // Change logout to login
             logoutBtn.textContent = 'Iniciar Sesión';
             logoutBtn.onclick = () => window.location.href = '/login.html';
+            
+            // Insert register button before login button
+            logoutBtn.parentNode.insertBefore(registerBtn, logoutBtn);
         }
         
         // Hide "Mis Reservas" tab
@@ -105,7 +117,9 @@ function configurePublicMode(isPublic) {
             notice.style.cssText = 'background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;';
             notice.innerHTML = `
                 <strong>ℹ️ Modo Público:</strong> Puedes explorar habitaciones y cotizar precios. 
-                <a href="/login.html" style="color: #667eea; font-weight: 600; text-decoration: underline;">Inicia sesión</a> 
+                <a href="/register.html" style="color: #667eea; font-weight: 600; text-decoration: underline;">Regístrate</a> 
+                o 
+                <a href="/login.html" style="color: #667eea; font-weight: 600; text-decoration: underline;">inicia sesión</a> 
                 para realizar reservas.
             `;
             bookingCard.insertBefore(notice, bookingCard.firstChild);
@@ -368,11 +382,16 @@ function showPublicCostPreview(room) {
         <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 20px; margin-top: 20px; text-align: center;">
             <p style="margin-bottom: 15px; font-size: 1.05rem;">
                 <strong>¿Listo para reservar?</strong><br>
-                Inicia sesión para confirmar tu reserva
+                Crea una cuenta o inicia sesión para confirmar tu reserva
             </p>
-            <a href="/login.html" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 15px rgba(102,126,234,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                🔐 Iniciar Sesión
-            </a>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <a href="/register.html" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 15px rgba(102,126,234,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    ✨ Registrarse
+                </a>
+                <a href="/login.html" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; border: 2px solid #667eea; transition: all 0.3s;" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='white'">
+                    🔐 Iniciar Sesión
+                </a>
+            </div>
         </div>
     `;
     

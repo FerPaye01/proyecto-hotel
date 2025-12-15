@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - H-Socket Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group input.error {
+            border-color: #e74c3c;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-register:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .login-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 480px) {
+            .register-container {
+                padding: 30px 20px;
+            }
+
+            .logo h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="logo">
+            <h1>🏨 H-Socket Manager</h1>
+            <p>Crea tu cuenta de cliente</p>
+        </div>
+
+        <div class="info-box">
+            <h3>✨ Beneficios de registrarte:</h3>
+            <ul>
+                <li>Reserva habitaciones en línea</li>
+                <li>Historial de tus reservas</li>
+                <li>Gestión de tu perfil</li>
+                <li>Actualizaciones en tiempo real</li>
+            </ul>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <form id="register-form">
+            <div class="form-group">
+                <label for="full-name">Nombre Completo *</label>
+                <input type="text" id="full-name" name="full_name" required minlength="2" placeholder="Juan Pérez">
+                <div id="full-name-error" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required placeholder="tu@email.com">
+                <div id="email-error" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña *</label>
+                <input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+                <div id="password-error" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm-password">Confirmar Contraseña *</label>
+                <input type="password" id="confirm-password" name="confirm_password" required minlength="6" placeholder="Repite tu contraseña">
+                <div id="confirm-password-error" class="error-message"></div>
+            </div>
+
+            <button type="submit" class="btn-register" id="register-btn">Crear Cuenta</button>
+        </form>
+
+        <div class="divider">o</div>
+
+        <div class="login-link">
+            ¿Ya tienes cuenta? <a href="/login.html">Inicia sesión aquí</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('register-form');
+        const messageEl = document.getElementById('message');
+        const registerBtn = document.getElementById('register-btn');
+
+        // Clear error on input
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                const errorEl = document.getElementById(`${input.id}-error`);
+                if (errorEl) {
+                    errorEl.classList.remove('show');
+                }
+            });
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Clear previous errors
+            document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('input').forEach(el => el.classList.remove('error'));
+            messageEl.classList.remove('show');
+
+            // Get form values
+            const fullName = document.getElementById('full-name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validate
+            let hasError = false;
+
+            if (fullName.length < 2) {
+                showFieldError('full-name', 'El nombre debe tener al menos 2 caracteres');
+                hasError = true;
+            }
+
+            if (!email || !email.includes('@')) {
+                showFieldError('email', 'Ingresa un email válido');
+                hasError = true;
+            }
+
+            if (password.length < 6) {
+                showFieldError('password', 'La contraseña debe tener al menos 6 caracteres');
+                hasError = true;
+            }
+
+            if (password !== confirmPassword) {
+                showFieldError('confirm-password', 'Las contraseñas no coinciden');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Disable button
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Creando cuenta...';
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Error al crear la cuenta');
+                }
+
+                // Success - store token and redirect
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                showMessage('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+
+                setTimeout(() => {
+                    window.location.href = data.redirectUrl || '/client/booking.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage(error.message, 'error');
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Crear Cuenta';
+            }
+        });
+
+        function showFieldError(fieldId, message) {
+            const input = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}-error`);
+            
+            input.classList.add('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+        }
+    </script>
+</body>
+</html>

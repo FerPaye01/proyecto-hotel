@@ -789,7 +789,7 @@ https://proyecto-hotel-tpma.onrender.com/client/booking.html
 4. Es redirigido a `/login.html`
 5. Después de autenticarse, puede realizar reservas
 
-**Nota:** Los clientes NO pueden auto-registrarse. Un administrador debe crear su cuenta primero.
+**Nota:** Los clientes pueden auto-registrarse desde `/register.html` o un administrador puede crear su cuenta.
 
 ---
 
