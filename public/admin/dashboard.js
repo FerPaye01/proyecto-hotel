@@ -459,14 +459,60 @@ function formatAuditDetails(details) {
         const parsed = typeof details === 'string' ? JSON.parse(details) : details;
         const parts = [];
         
-        if (parsed.room_id) parts.push(`Habitación: ${parsed.room_id}`);
-        if (parsed.booking_id) parts.push(`Reserva: ${parsed.booking_id}`);
-        if (parsed.user_id) parts.push(`Usuario: ${parsed.user_id}`);
-        if (parsed.previous_value) parts.push(`Anterior: ${parsed.previous_value}`);
-        if (parsed.new_value) parts.push(`Nuevo: ${parsed.new_value}`);
+        // User management details
+        if (parsed.target_user_id) {
+            parts.push(`Usuario: ${parsed.target_user_id.substring(0, 8)}...`);
+        }
         
-        return parts.length > 0 ? escapeHtml(parts.join(', ')) : '-';
+        if (parsed.changed_fields && Array.isArray(parsed.changed_fields)) {
+            parts.push(`Campos: ${parsed.changed_fields.join(', ')}`);
+        }
+        
+        if (parsed.previous_values && parsed.new_values) {
+            const changes = [];
+            for (const field in parsed.previous_values) {
+                const prev = parsed.previous_values[field];
+                const newVal = parsed.new_values[field];
+                if (field !== 'password') { // Don't show password values
+                    changes.push(`${field}: "${prev}" → "${newVal}"`);
+                } else {
+                    changes.push(`${field}: [modificado]`);
+                }
+            }
+            if (changes.length > 0) {
+                parts.push(changes.join('; '));
+            }
+        }
+        
+        // Room details
+        if (parsed.room_id) parts.push(`Habitación: ${parsed.room_id}`);
+        
+        // Booking details
+        if (parsed.booking_id) {
+            const bookingId = typeof parsed.booking_id === 'string' 
+                ? parsed.booking_id.substring(0, 8) + '...'
+                : parsed.booking_id;
+            parts.push(`Reserva: ${bookingId}`);
+        }
+        
+        // Generic previous/new values (for non-user operations)
+        if (parsed.previous_value && !parsed.previous_values) {
+            const prev = typeof parsed.previous_value === 'object' 
+                ? JSON.stringify(parsed.previous_value) 
+                : parsed.previous_value;
+            parts.push(`Anterior: ${prev}`);
+        }
+        
+        if (parsed.new_value && !parsed.new_values) {
+            const newVal = typeof parsed.new_value === 'object' 
+                ? JSON.stringify(parsed.new_value) 
+                : parsed.new_value;
+            parts.push(`Nuevo: ${newVal}`);
+        }
+        
+        return parts.length > 0 ? escapeHtml(parts.join(' | ')) : '-';
     } catch (error) {
+        console.error('Error formatting audit details:', error);
         return escapeHtml(String(details));
     }
 }
