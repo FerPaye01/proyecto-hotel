@@ -220,7 +220,7 @@ function renderRooms(rooms) {
             </div>
             <div class="room-price">${parseFloat(room.price_per_night).toFixed(2)} / noche</div>
             <div class="room-status available">Disponible</div>
-            ${roomImage ? `<div class="room-view-image" onclick="event.stopPropagation(); viewRoomImage('${room.number}', '${roomImage}', '${room.type}', ${room.price_per_night}')">🔍 Ver imagen completa</div>` : ''}
+            ${roomImage ? `<div class="room-view-image" onclick="event.stopPropagation(); exploreRoom('${room.number}', '${room.type}', ${room.price_per_night}, '${room.image_1 || ''}', '${room.image_2 || ''}', '${room.image_3 || ''}')">🏨 Explorar habitación</div>` : ''}
         `;
         
         roomsGrid.appendChild(roomCard);
@@ -680,3 +680,159 @@ document.getElementById('profile-modal')?.addEventListener('click', (e) => {
         closeProfileModal();
     }
 });
+
+
+/**
+ * Explore room with image carousel
+ */
+function exploreRoom(roomNumber, roomType, pricePerNight, image1, image2, image3) {
+    // Collect available images
+    const images = [image1, image2, image3].filter(img => img && img !== 'null' && img !== '');
+    
+    if (images.length === 0) {
+        alert('No hay imágenes disponibles para esta habitación');
+        return;
+    }
+    
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('room-explore-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'room-explore-modal';
+        modal.style.cssText = `
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            justify-content: center;
+            align-items: center;
+        `;
+        modal.innerHTML = `
+            <div style="position: relative; max-width: 90%; max-height: 90%; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <span onclick="closeRoomExploreModal()" style="position: absolute; top: 15px; right: 25px; font-size: 40px; color: #999; cursor: pointer; z-index: 10001; transition: color 0.3s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#999'">&times;</span>
+                
+                <h2 id="modal-room-title" style="margin-bottom: 8px; color: #333; font-size: 1.8rem;"></h2>
+                <p id="modal-room-info" style="margin-bottom: 25px; color: #666; font-size: 1.1rem;"></p>
+                
+                <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+                    <button id="prev-image-btn" onclick="changeRoomImage(-1)" style="position: absolute; left: -50px; background: #667eea; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(102,126,234,0.3); transition: all 0.3s; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">‹</button>
+                    
+                    <div style="text-align: center;">
+                        <img id="modal-room-image" src="" alt="Room Image" style="max-width: 800px; width: 100%; max-height: 60vh; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);" />
+                        <div id="image-counter" style="margin-top: 15px; color: #667eea; font-weight: 600; font-size: 1rem;"></div>
+                        <div id="image-dots" style="margin-top: 10px; display: flex; gap: 8px; justify-content: center;"></div>
+                    </div>
+                    
+                    <button id="next-image-btn" onclick="changeRoomImage(1)" style="position: absolute; right: -50px; background: #667eea; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(102,126,234,0.3); transition: all 0.3s; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">›</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Close on click outside
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                closeRoomExploreModal();
+            }
+        };
+    }
+    
+    // Store images and current index in modal data
+    modal.dataset.images = JSON.stringify(images);
+    modal.dataset.currentIndex = '0';
+    
+    // Set content
+    document.getElementById('modal-room-title').textContent = `Habitación ${roomNumber}`;
+    document.getElementById('modal-room-info').textContent = `${roomType} - $${parseFloat(pricePerNight).toFixed(2)} por noche`;
+    
+    // Show first image
+    updateRoomImage();
+    
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+/**
+ * Update displayed room image
+ */
+function updateRoomImage() {
+    const modal = document.getElementById('room-explore-modal');
+    const images = JSON.parse(modal.dataset.images);
+    const currentIndex = parseInt(modal.dataset.currentIndex);
+    
+    // Update image
+    document.getElementById('modal-room-image').src = images[currentIndex];
+    
+    // Update counter
+    document.getElementById('image-counter').textContent = `Imagen ${currentIndex + 1} de ${images.length}`;
+    
+    // Update dots
+    const dotsContainer = document.getElementById('image-dots');
+    dotsContainer.innerHTML = '';
+    images.forEach((_, index) => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: ${index === currentIndex ? '#667eea' : '#ddd'};
+            cursor: pointer;
+            transition: all 0.3s;
+        `;
+        dot.onclick = () => {
+            modal.dataset.currentIndex = index.toString();
+            updateRoomImage();
+        };
+        dot.onmouseover = () => {
+            if (index !== currentIndex) dot.style.background = '#aaa';
+        };
+        dot.onmouseout = () => {
+            if (index !== currentIndex) dot.style.background = '#ddd';
+        };
+        dotsContainer.appendChild(dot);
+    });
+    
+    // Show/hide navigation buttons based on number of images
+    const prevBtn = document.getElementById('prev-image-btn');
+    const nextBtn = document.getElementById('next-image-btn');
+    
+    if (images.length === 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = 'flex';
+        nextBtn.style.display = 'flex';
+    }
+}
+
+/**
+ * Change room image in carousel
+ */
+function changeRoomImage(direction) {
+    const modal = document.getElementById('room-explore-modal');
+    const images = JSON.parse(modal.dataset.images);
+    let currentIndex = parseInt(modal.dataset.currentIndex);
+    
+    // Calculate new index with wrapping
+    currentIndex = (currentIndex + direction + images.length) % images.length;
+    
+    // Update index
+    modal.dataset.currentIndex = currentIndex.toString();
+    
+    // Update display
+    updateRoomImage();
+}
+
+/**
+ * Close room explore modal
+ */
+function closeRoomExploreModal() {
+    const modal = document.getElementById('room-explore-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
