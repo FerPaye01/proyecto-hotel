@@ -759,6 +759,23 @@ function escapeHtml(text) {
  * Show specific report view
  */
 function showReport(reportType) {
+    console.log('showReport called with:', reportType);
+    
+    // First, activate the reports tab
+    const reportsTab = document.querySelector('.nav-tab[data-tab="reports"]');
+    const reportsTabContent = document.getElementById('reports-tab');
+    
+    if (reportsTab && reportsTabContent) {
+        // Remove active class from all tabs
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Activate reports tab
+        reportsTab.classList.add('active');
+        reportsTabContent.classList.add('active');
+        console.log('Reports tab activated');
+    }
+    
     // Hide all report views
     document.querySelectorAll('.report-view').forEach(view => {
         view.style.display = 'none';
@@ -768,11 +785,18 @@ function showReport(reportType) {
     const reportView = document.getElementById(`report-${reportType}`);
     if (reportView) {
         reportView.style.display = 'block';
+        console.log('Report view shown:', `report-${reportType}`);
         
         // Load data if not already loaded
         if (reportType !== 'general') {
+            console.log('Loading audit report for:', reportType);
             loadAuditReport(reportType);
+        } else {
+            // Load general reports
+            loadReports();
         }
+    } else {
+        console.error('Report view not found:', `report-${reportType}`);
     }
 }
 
@@ -805,14 +829,24 @@ async function loadAuditReport(reportType) {
     
     if (!loadingEl || !contentEl) {
         console.error(`Elements not found for report type: ${reportType}`);
+        console.log('Available elements:', {
+            loading: !!loadingEl,
+            content: !!contentEl,
+            reportType: reportType
+        });
         return;
     }
     
-    // Skip if already loaded
-    if (contentEl.style.display === 'block') return;
+    // Check if already loaded and visible
+    const isAlreadyLoaded = contentEl.dataset.loaded === 'true';
+    if (isAlreadyLoaded && contentEl.style.display !== 'none') {
+        console.log('Report already loaded:', reportType);
+        return;
+    }
     
     loadingEl.style.display = 'block';
     loadingEl.textContent = 'Cargando datos...';
+    contentEl.style.display = 'none';
     
     try {
         // Use cached data if available
@@ -820,6 +854,7 @@ async function loadAuditReport(reportType) {
         
         // Fetch if not cached
         if (!logs) {
+            console.log('Fetching audit logs from API...');
             const response = await fetch(`${API_BASE}/admin/audit-logs`, {
                 headers: getAuthHeaders()
             });
@@ -831,9 +866,13 @@ async function loadAuditReport(reportType) {
             const data = await response.json();
             logs = data.logs || [];
             cachedAuditLogs = logs; // Cache the data
+            console.log('Fetched logs:', logs.length);
+        } else {
+            console.log('Using cached logs:', logs.length);
         }
         
         // Render based on report type
+        console.log('Rendering report:', reportType);
         switch(reportType) {
             case 'top-users':
                 renderTopUsersReport(logs);
@@ -852,10 +891,13 @@ async function loadAuditReport(reportType) {
         
         loadingEl.style.display = 'none';
         contentEl.style.display = 'block';
+        contentEl.dataset.loaded = 'true';
+        console.log('Report rendered successfully:', reportType);
     } catch (error) {
         console.error('Error loading audit report:', error);
         loadingEl.textContent = `Error: ${error.message}`;
         loadingEl.style.display = 'block';
+        contentEl.style.display = 'none';
     }
 }
 
@@ -1249,24 +1291,60 @@ function exportToCSV(table, reportName) {
 }
 
 /**
- * Export table to PDF (simple version using print)
+ * Export table to PDF (with charts)
  */
 function exportToPDF(table, reportName) {
-    // Create a new window with the table
-    const printWindow = window.open('', '', 'height=600,width=800');
+    // Create a new window with the content
+    const printWindow = window.open('', '', 'height=800,width=1000');
     
     printWindow.document.write('<html><head><title>' + reportName + '</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; }');
-    printWindow.document.write('h1 { color: #667eea; }');
+    printWindow.document.write('h1 { color: #667eea; margin-bottom: 10px; }');
+    printWindow.document.write('h2 { color: #764ba2; margin-top: 30px; margin-bottom: 15px; font-size: 1.2rem; }');
+    printWindow.document.write('.header { border-bottom: 3px solid #667eea; padding-bottom: 10px; margin-bottom: 20px; }');
+    printWindow.document.write('.date { color: #666; font-size: 0.9rem; }');
+    printWindow.document.write('.charts-container { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }');
+    printWindow.document.write('.chart-item { flex: 1; min-width: 300px; text-align: center; }');
+    printWindow.document.write('.chart-item img { max-width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 8px; }');
     printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }');
-    printWindow.document.write('th { background-color: #667eea; color: white; }');
+    printWindow.document.write('th { background-color: #667eea; color: white; font-weight: 600; }');
     printWindow.document.write('tr:nth-child(even) { background-color: #f9f9f9; }');
+    printWindow.document.write('@media print { body { padding: 10px; } }');
     printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h1>Reporte: ' + reportName + '</h1>');
-    printWindow.document.write('<p>Fecha: ' + new Date().toLocaleDateString('es-ES') + '</p>');
+    
+    // Header
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<h1>🏨 H-Socket Manager - Reporte de Auditoría</h1>');
+    printWindow.document.write('<p class="date">Fecha de generación: ' + new Date().toLocaleString('es-ES') + '</p>');
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('<h2>' + getReportTitle(reportName) + '</h2>');
+    
+    // Add charts if they exist
+    const charts = getChartsForReport(reportName);
+    if (charts.length > 0) {
+        printWindow.document.write('<div class="charts-container">');
+        charts.forEach(chartCanvas => {
+            if (chartCanvas) {
+                try {
+                    const chartImage = chartCanvas.toDataURL('image/png');
+                    printWindow.document.write('<div class="chart-item">');
+                    printWindow.document.write('<img src="' + chartImage + '" alt="Gráfico">');
+                    printWindow.document.write('</div>');
+                } catch (error) {
+                    console.error('Error capturing chart:', error);
+                }
+            }
+        });
+        printWindow.document.write('</div>');
+    }
+    
+    // Add table
+    printWindow.document.write('<h2>Datos Detallados</h2>');
     printWindow.document.write(table.outerHTML);
+    
     printWindow.document.write('</body></html>');
     
     printWindow.document.close();
@@ -1275,5 +1353,47 @@ function exportToPDF(table, reportName) {
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
-    }, 250);
+    }, 500);
+}
+
+/**
+ * Get report title by report name
+ */
+function getReportTitle(reportName) {
+    const titles = {
+        'top-users': '👥 Top 5 Usuarios Más Activos (Últimos 7 días)',
+        'critical-changes': '⚠️ Cambios Críticos Recientes (Últimas 24 horas)',
+        'activity-by-type': '📈 Actividad por Tipo de Operación (Últimos 30 días)'
+    };
+    return titles[reportName] || reportName;
+}
+
+/**
+ * Get chart canvases for a specific report
+ */
+function getChartsForReport(reportName) {
+    const charts = [];
+    
+    switch(reportName) {
+        case 'top-users':
+            const topUsersChart = document.getElementById('top-users-chart');
+            const topUsersPieChart = document.getElementById('top-users-pie-chart');
+            if (topUsersChart) charts.push(topUsersChart);
+            if (topUsersPieChart) charts.push(topUsersPieChart);
+            break;
+            
+        case 'critical-changes':
+            const criticalChangesChart = document.getElementById('critical-changes-chart');
+            if (criticalChangesChart) charts.push(criticalChangesChart);
+            break;
+            
+        case 'activity-by-type':
+            const activityBarChart = document.getElementById('activity-by-type-bar-chart');
+            const activityDoughnutChart = document.getElementById('activity-by-type-doughnut-chart');
+            if (activityBarChart) charts.push(activityBarChart);
+            if (activityDoughnutChart) charts.push(activityDoughnutChart);
+            break;
+    }
+    
+    return charts;
 }
