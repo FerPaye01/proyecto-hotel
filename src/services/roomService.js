@@ -209,13 +209,14 @@ async function getRoomById(roomId) {
 
 /**
  * Update room status with authorization and broadcasting
+ * Implements strict state transition rules to prevent conflicts with check-in/check-out
  * Requirements: 3.3, 3.4, 11.1
  * @param {string} actorId - UUID of the user updating the room status
  * @param {string} actorRole - Role of the actor ('staff' or 'admin')
  * @param {number} roomId - Room ID to update
  * @param {string} newStatus - New room status (AVAILABLE, OCCUPIED, MAINTENANCE, CLEANING)
  * @returns {Promise<Object>} Updated room object
- * @throws {Error} If authorization fails, room not found, or validation fails
+ * @throws {Error} If authorization fails, room not found, validation fails, or invalid transition
  */
 async function updateRoomStatus(actorId, actorRole, roomId, newStatus) {
   // Verify actor role is 'staff' or 'admin'
@@ -232,11 +233,59 @@ async function updateRoomStatus(actorId, actorRole, roomId, newStatus) {
     throw new Error(statusValidation.error);
   }
 
-  // Get current room state for audit log
+  // Get current room state for validation
   const previousRoom = await Room.findById(roomId);
   
   if (!previousRoom) {
     throw new Error('Room not found');
+  }
+
+  const currentStatus = previousRoom.status;
+
+  // CRITICAL: Validate state transitions to prevent conflicts with check-in/check-out
+  // OCCUPIED status can ONLY be set via check-in, never manually
+  if (newStatus === 'OCCUPIED') {
+    throw new Error('Cannot manually set room to OCCUPIED. Use check-in operation instead.');
+  }
+
+  // OCCUPIED → AVAILABLE is FORBIDDEN (must go through check-out first)
+  if (currentStatus === 'OCCUPIED' && newStatus === 'AVAILABLE') {
+    throw new Error('Cannot change OCCUPIED room to AVAILABLE. Must perform check-out first.');
+  }
+
+  // Check for active bookings when trying to change to AVAILABLE
+  if (newStatus === 'AVAILABLE') {
+    const pool = require('../config/database');
+    const activeBookingCheck = await pool.query(
+      `SELECT COUNT(*) as count FROM bookings 
+       WHERE room_id = $1 AND status = 'CHECKED_IN'`,
+      [roomId]
+    );
+
+    if (parseInt(activeBookingCheck.rows[0].count) > 0) {
+      throw new Error('Cannot set room to AVAILABLE while guest is checked in. Perform check-out first.');
+    }
+
+    // Only allow AVAILABLE from CLEANING or MAINTENANCE
+    if (currentStatus !== 'CLEANING' && currentStatus !== 'MAINTENANCE' && currentStatus !== 'AVAILABLE') {
+      throw new Error(`Cannot change from ${currentStatus} to AVAILABLE. Room must be in CLEANING or MAINTENANCE status first.`);
+    }
+  }
+
+  // Define valid manual transitions
+  const validTransitions = {
+    'AVAILABLE': ['MAINTENANCE', 'CLEANING'],
+    'OCCUPIED': ['MAINTENANCE'], // Only emergency maintenance allowed
+    'CLEANING': ['AVAILABLE', 'MAINTENANCE'],
+    'MAINTENANCE': ['AVAILABLE', 'CLEANING']
+  };
+
+  // Check if transition is valid
+  if (!validTransitions[currentStatus].includes(newStatus)) {
+    throw new Error(
+      `Invalid status transition from ${currentStatus} to ${newStatus}. ` +
+      `Valid transitions from ${currentStatus}: ${validTransitions[currentStatus].join(', ')}`
+    );
   }
 
   // Update room status in database
@@ -253,7 +302,8 @@ async function updateRoomStatus(actorId, actorRole, roomId, newStatus) {
     affected_entity_id: roomId.toString(),
     room_id: roomId,
     previous_status: previousRoom.status,
-    new_status: updatedRoom.status
+    new_status: updatedRoom.status,
+    transition_type: 'manual'
   });
 
   // Emit WebSocket broadcast to all clients

@@ -495,6 +495,7 @@
             </div>
             <div class="error-message" id="statusError"></div>
             <div class="success-message" id="statusSuccess"></div>
+            <div id="statusInfo" style="display: none; background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px; border-radius: 5px; margin-bottom: 15px; font-size: 14px;"></div>
             <form id="changeStatusForm" onsubmit="handleChangeStatus(event)">
                 <div class="form-group">
                     <label>Habitación</label>
@@ -504,12 +505,17 @@
                 <div class="form-group">
                     <label for="newStatus">Nuevo Estado *</label>
                     <select id="newStatus" name="newStatus" required>
-                        <option value="">Seleccione un estado</option>
-                        <option value="AVAILABLE">Disponible</option>
-                        <option value="OCCUPIED">Ocupada</option>
-                        <option value="CLEANING">En Limpieza</option>
-                        <option value="MAINTENANCE">En Mantenimiento</option>
+                        <!-- Options will be populated dynamically based on current status -->
                     </select>
+                </div>
+                <div style="background: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin-bottom: 15px; font-size: 13px;">
+                    <strong>ℹ️ Reglas de transición:</strong>
+                    <ul style="margin: 8px 0 0 20px; padding: 0;">
+                        <li><strong>OCCUPIED → AVAILABLE:</strong> ❌ Prohibido (usar Check-out)</li>
+                        <li><strong>CLEANING/MAINTENANCE → AVAILABLE:</strong> ✅ Permitido</li>
+                        <li><strong>AVAILABLE → MAINTENANCE/CLEANING:</strong> ✅ Permitido</li>
+                        <li><strong>OCCUPIED → MAINTENANCE:</strong> ✅ Solo emergencias</li>
+                    </ul>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-cancel" onclick="closeChangeStatusModal()">Cancelar</button>

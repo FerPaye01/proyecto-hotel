@@ -452,7 +452,52 @@ function openChangeStatusModal(room) {
         // Set room info
         document.getElementById('statusRoomNumber').value = `${room.number} - ${room.type}`;
         document.getElementById('statusRoomId').value = room.id;
-        document.getElementById('newStatus').value = room.status;
+        
+        // Define valid transitions based on current status
+        const validTransitions = {
+            'AVAILABLE': ['MAINTENANCE', 'CLEANING'],
+            'OCCUPIED': ['MAINTENANCE'], // Only emergency maintenance
+            'CLEANING': ['AVAILABLE', 'MAINTENANCE'],
+            'MAINTENANCE': ['AVAILABLE', 'CLEANING']
+        };
+        
+        // Get valid statuses for current room
+        const currentStatus = room.status;
+        const allowedStatuses = validTransitions[currentStatus] || [];
+        
+        // Populate status dropdown with only valid transitions
+        const statusSelect = document.getElementById('newStatus');
+        statusSelect.innerHTML = '';
+        
+        // Add current status as disabled option to show where we are
+        const currentOption = document.createElement('option');
+        currentOption.value = currentStatus;
+        currentOption.textContent = `${currentStatus} (actual)`;
+        currentOption.disabled = true;
+        currentOption.selected = true;
+        statusSelect.appendChild(currentOption);
+        
+        // Add valid transition options
+        allowedStatuses.forEach(status => {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status;
+            statusSelect.appendChild(option);
+        });
+        
+        // Show info message about restrictions
+        const infoDiv = document.getElementById('statusInfo');
+        if (infoDiv) {
+            if (currentStatus === 'OCCUPIED') {
+                infoDiv.textContent = '⚠️ Habitación ocupada: Solo se permite cambiar a MAINTENANCE en caso de emergencia. Use Check-out para liberar.';
+                infoDiv.style.display = 'block';
+            } else if (allowedStatuses.length === 0) {
+                infoDiv.textContent = '⚠️ No hay transiciones válidas desde este estado.';
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
         
         hideMessage('statusError');
         hideMessage('statusSuccess');

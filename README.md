@@ -42,9 +42,15 @@ H-Socket Distributed Manager is a production-grade distributed hotel management 
 
 ### Staff Operations
 - **Real-time Dashboard**: Color-coded room status indicators
-- **Check-in Operations**: Process guest arrivals
-- **Check-out Operations**: Process guest departures with late penalty calculation
-- **Room Status Management**: Update room status (cleaning, maintenance)
+- **Check-in Operations**: Process guest arrivals (automatically sets room to OCCUPIED)
+- **Check-out Operations**: Process guest departures with late penalty calculation (automatically sets room to CLEANING)
+- **Room Status Management**: Update room status with strict validation rules
+  - ✅ Mark cleaned rooms as AVAILABLE
+  - ✅ Schedule maintenance on available rooms
+  - ✅ Emergency maintenance on occupied rooms
+  - ❌ Cannot manually set rooms to OCCUPIED (use check-in)
+  - ❌ Cannot change OCCUPIED to AVAILABLE (use check-out)
+  - See [Room State Machine](ROOM_STATE_MACHINE.md) for complete rules
 
 ### Client Booking
 - **Room Search**: View available rooms by date range

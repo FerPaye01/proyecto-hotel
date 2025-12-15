@@ -2,19 +2,32 @@
 
 ## ✅ Funcionalidades Implementadas
 
-### 1. **Cambio de Estado de Habitaciones** (Staff/Admin)
+### 1. **Cambio de Estado de Habitaciones** (Staff/Admin) - CON VALIDACIONES ESTRICTAS
 - **Quién**: Staff y Admin
 - **Dónde**: `/staff/operations.html`
+- **Reglas de Transición** (para evitar conflictos con check-in/check-out):
+  - ✅ **CLEANING → AVAILABLE**: Habitación limpia y lista
+  - ✅ **MAINTENANCE → AVAILABLE**: Mantenimiento completado
+  - ✅ **AVAILABLE → MAINTENANCE**: Programar mantenimiento
+  - ✅ **AVAILABLE → CLEANING**: Programar limpieza
+  - ✅ **OCCUPIED → MAINTENANCE**: Solo emergencias
+  - ✅ **CLEANING ↔ MAINTENANCE**: Cambio entre estados de servicio
+  - ❌ **OCCUPIED → AVAILABLE**: PROHIBIDO (usar Check-out)
+  - ❌ **OCCUPIED → CLEANING**: PROHIBIDO (usar Check-out primero)
+  - ❌ **Cualquier estado → OCCUPIED**: PROHIBIDO (solo vía Check-in)
+
 - **Cómo probar**:
   1. Inicia sesión como staff o admin
   2. Haz clic en cualquier habitación del tablero
-  3. Se abrirá un modal con opciones de estado:
-     - AVAILABLE (Disponible)
-     - OCCUPIED (Ocupada)
-     - CLEANING (Limpieza)
-     - MAINTENANCE (Mantenimiento)
-  4. Selecciona un estado y haz clic en "Cambiar Estado"
-  5. La habitación se actualizará en tiempo real para todos los usuarios conectados
+  3. Se abrirá un modal mostrando **solo las transiciones válidas** según el estado actual
+  4. El modal muestra:
+     - Estado actual (deshabilitado)
+     - Opciones válidas de transición
+     - Mensaje de advertencia si la habitación está ocupada
+     - Reglas de transición en la parte inferior
+  5. Selecciona un estado válido y haz clic en "Cambiar Estado"
+  6. Si intentas una transición inválida, verás un error explicativo
+  7. La habitación se actualizará en tiempo real para todos los usuarios conectados
 
 ### 2. **Editar Precio y Tipo de Habitación** (Solo Admin)
 - **Quién**: Solo Admin
@@ -60,6 +73,42 @@
   4. Confirma la eliminación en el diálogo
   5. Si la habitación tiene reservas activas, verás un error
   6. Si no tiene reservas, se eliminará y desaparecerá de la lista
+
+## 🔒 Integridad de Estados: Check-in/Check-out vs Cambio Manual
+
+### ¿Por qué estas restricciones?
+
+El sistema implementa **dos flujos separados** para cambiar el estado de las habitaciones:
+
+**1. Flujo Automático (Check-in/Check-out)**:
+- Check-in: `CONFIRMED` (reserva) → `CHECKED_IN` (reserva) + `AVAILABLE` → `OCCUPIED` (habitación)
+- Check-out: `CHECKED_IN` → `CHECKED_OUT` (reserva) + `OCCUPIED` → `CLEANING` (habitación)
+- Este flujo está **vinculado a reservas** y mantiene consistencia entre bookings y rooms
+
+**2. Flujo Manual (Staff)**:
+- Para mantenimiento y limpieza programados
+- Para liberar habitaciones después de limpieza/mantenimiento
+- **NO debe interferir** con el flujo de check-in/check-out
+
+### Problemas que se previenen:
+
+❌ **Sin validaciones** (sistema anterior):
+- Staff cambia habitación ocupada a AVAILABLE → Huésped pierde su habitación
+- Staff cambia habitación a OCCUPIED sin reserva → Inconsistencia en reportes
+- Habitación en OCCUPIED sin booking asociado → Pérdida de trazabilidad
+
+✅ **Con validaciones** (sistema actual):
+- Solo check-out puede liberar una habitación ocupada
+- Solo check-in puede marcar una habitación como ocupada
+- Staff solo maneja estados de servicio (CLEANING, MAINTENANCE)
+- Trazabilidad completa en audit_logs
+
+### Casos de Uso Válidos:
+
+1. **Limpieza completada**: `CLEANING` → `AVAILABLE` ✅
+2. **Mantenimiento programado**: `AVAILABLE` → `MAINTENANCE` ✅
+3. **Emergencia en habitación ocupada**: `OCCUPIED` → `MAINTENANCE` ✅
+4. **Después de check-out automático**: Habitación queda en `CLEANING`, staff la cambia a `AVAILABLE` ✅
 
 ## 🔧 Mejoras Técnicas Implementadas
 
