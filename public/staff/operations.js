@@ -561,3 +561,126 @@ async function handleChangeStatus(event) {
         showMessage('statusError', error.message || 'Error al cambiar el estado');
     }
 }
+
+
+/**
+ * Profile Management Functions
+ */
+
+// Open profile modal
+function openProfileModal() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        alert('No se pudo cargar la información del usuario');
+        return;
+    }
+    
+    // Populate form with current user data
+    document.getElementById('profileEmail').value = user.email || '';
+    document.getElementById('profileFullname').value = user.full_name || '';
+    document.getElementById('profileRole').value = user.role || '';
+    
+    // Clear password fields
+    document.getElementById('profileCurrentPassword').value = '';
+    document.getElementById('profileNewPassword').value = '';
+    
+    // Clear any previous messages
+    document.getElementById('profileError').textContent = '';
+    document.getElementById('profileSuccess').textContent = '';
+    
+    // Show modal
+    document.getElementById('profileModal').style.display = 'flex';
+}
+
+// Close profile modal
+function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+
+// Handle profile form submission
+async function handleProfileUpdate(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('profileEmail').value;
+    const full_name = document.getElementById('profileFullname').value;
+    const currentPassword = document.getElementById('profileCurrentPassword').value;
+    const newPassword = document.getElementById('profileNewPassword').value;
+    
+    // Clear previous messages
+    document.getElementById('profileError').textContent = '';
+    document.getElementById('profileSuccess').textContent = '';
+    
+    // Validate password fields
+    if (newPassword && !currentPassword) {
+        document.getElementById('profileError').textContent = 'Debes ingresar tu contraseña actual para cambiarla';
+        return;
+    }
+    
+    if (currentPassword && !newPassword) {
+        document.getElementById('profileError').textContent = 'Debes ingresar una nueva contraseña';
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No hay sesión activa');
+        }
+        
+        const updates = {
+            email,
+            full_name
+        };
+        
+        // Add password if changing
+        if (newPassword) {
+            updates.password = newPassword;
+        }
+        
+        const response = await fetch('/api/users/profile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...updates,
+                currentPassword: currentPassword || undefined
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al actualizar perfil');
+        }
+        
+        // Update local storage with new user data
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const updatedUser = {
+            ...currentUser,
+            email: data.user.email,
+            full_name: data.user.full_name
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Show success message
+        document.getElementById('profileSuccess').textContent = 'Perfil actualizado exitosamente';
+        
+        // Clear password fields
+        document.getElementById('profileCurrentPassword').value = '';
+        document.getElementById('profileNewPassword').value = '';
+        
+        // Update user info display
+        updateUserInfo();
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+            closeProfileModal();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        document.getElementById('profileError').textContent = error.message;
+    }
+}

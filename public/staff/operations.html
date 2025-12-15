@@ -349,6 +349,7 @@
             <button class="btn btn-primary" onclick="openCheckoutModal()">Check-Out</button>
             <button class="btn btn-primary" onclick="openPaymentModal()">Procesar Pago</button>
             <span class="user-info" id="userInfo">Cargando...</span>
+            <button class="btn btn-primary" onclick="openProfileModal()">👤 Mi Perfil</button>
             <button class="btn btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </div>
@@ -378,6 +379,47 @@
 
         <div id="roomGrid" class="room-grid">
             <div class="loading">Cargando habitaciones...</div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Mi Perfil</h2>
+                <button class="close-btn" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <div class="error-message" id="profileError"></div>
+            <div class="success-message" id="profileSuccess"></div>
+            <form id="profileForm" onsubmit="handleProfileUpdate(event)">
+                <div class="form-group">
+                    <label for="profileEmail">Email</label>
+                    <input type="email" id="profileEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileFullname">Nombre Completo</label>
+                    <input type="text" id="profileFullname" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileRole">Rol</label>
+                    <input type="text" id="profileRole" readonly style="background: #f5f5f5;">
+                </div>
+                <div class="form-section">
+                    <h3 style="color: #667eea; margin: 20px 0 10px 0;">Cambiar Contraseña (Opcional)</h3>
+                    <div class="form-group">
+                        <label for="profileCurrentPassword">Contraseña Actual</label>
+                        <input type="password" id="profileCurrentPassword" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileNewPassword">Nueva Contraseña</label>
+                        <input type="password" id="profileNewPassword" minlength="6">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeProfileModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 

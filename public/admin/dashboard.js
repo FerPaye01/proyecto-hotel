@@ -1699,3 +1699,143 @@ async function deleteRoom(roomId, roomNumber) {
         alert(`Error: ${error.message}`);
     }
 }
+
+/**
+ * Profile Management Functions
+ */
+
+// Open profile modal
+function openProfileModal() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        alert('No se pudo cargar la información del usuario');
+        return;
+    }
+    
+    // Populate form with current user data
+    document.getElementById('profile-email').value = user.email || '';
+    document.getElementById('profile-fullname').value = user.full_name || '';
+    document.getElementById('profile-role').value = user.role || '';
+    
+    // Clear password fields
+    document.getElementById('profile-current-password').value = '';
+    document.getElementById('profile-new-password').value = '';
+    
+    // Clear any previous messages
+    const message = document.getElementById('profile-message');
+    message.className = 'message';
+    message.textContent = '';
+    
+    // Show modal
+    document.getElementById('profile-modal').classList.add('show');
+}
+
+// Close profile modal
+function closeProfileModal() {
+    document.getElementById('profile-modal').classList.remove('show');
+}
+
+// Handle profile form submission
+document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('profile-email').value;
+    const full_name = document.getElementById('profile-fullname').value;
+    const currentPassword = document.getElementById('profile-current-password').value;
+    const newPassword = document.getElementById('profile-new-password').value;
+    
+    // Validate password fields
+    if (newPassword && !currentPassword) {
+        showProfileMessage('Debes ingresar tu contraseña actual para cambiarla', 'error');
+        return;
+    }
+    
+    if (currentPassword && !newPassword) {
+        showProfileMessage('Debes ingresar una nueva contraseña', 'error');
+        return;
+    }
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            throw new Error('No hay sesión activa');
+        }
+        
+        const updates = {
+            email,
+            full_name
+        };
+        
+        // Add password if changing
+        if (newPassword) {
+            updates.password = newPassword;
+        }
+        
+        const response = await fetch(`${API_BASE}/users/profile`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...updates,
+                currentPassword: currentPassword || undefined
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al actualizar perfil');
+        }
+        
+        // Update local storage with new user data
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const updatedUser = {
+            ...currentUser,
+            email: data.user.email,
+            full_name: data.user.full_name
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Show success message
+        showProfileMessage('Perfil actualizado exitosamente', 'success');
+        
+        // Clear password fields
+        document.getElementById('profile-current-password').value = '';
+        document.getElementById('profile-new-password').value = '';
+        
+        // Update user info display
+        displayUserInfo();
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+            closeProfileModal();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showProfileMessage(error.message, 'error');
+    }
+});
+
+// Show profile message
+function showProfileMessage(text, type) {
+    const message = document.getElementById('profile-message');
+    message.textContent = text;
+    message.className = `message ${type} show`;
+    
+    // Auto-hide after 5 seconds for errors
+    if (type === 'error') {
+        setTimeout(() => {
+            message.className = 'message';
+        }, 5000);
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('profile-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'profile-modal') {
+        closeProfileModal();
+    }
+});
