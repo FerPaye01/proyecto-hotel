@@ -20,10 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Display user info
     displayUserInfo();
     
-    // Set minimum date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('check-in-date').min = today;
-    document.getElementById('check-out-date').min = today;
+    // Set minimum date to today (allow same-day bookings for testing)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    const todayStr = today.toISOString().split('T')[0];
+    document.getElementById('check-in-date').min = todayStr;
+    document.getElementById('check-out-date').min = todayStr;
     
     // Initialize tab navigation
     initializeTabs();
