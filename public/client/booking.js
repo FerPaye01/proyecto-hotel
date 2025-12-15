@@ -383,7 +383,12 @@ function renderBookingHistory(bookings, tableBody) {
         const statusText = getStatusText(booking.status);
         
         row.innerHTML = `
-            <td>${booking.id.substring(0, 8)}...</td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <code style="font-size: 10px; background: #f0f0f0; padding: 4px 6px; border-radius: 4px; word-break: break-all; max-width: 250px;" title="${booking.id}">${booking.id}</code>
+                    <button onclick="copyBookingId('${booking.id}')" style="background: #667eea; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;" title="Copiar ID">📋</button>
+                </div>
+            </td>
             <td>Habitación ${booking.room_id}</td>
             <td>${formatDate(booking.check_in_date)}</td>
             <td>${formatDate(booking.check_out_date)}</td>
@@ -392,6 +397,19 @@ function renderBookingHistory(bookings, tableBody) {
         `;
         
         tableBody.appendChild(row);
+    });
+}
+
+/**
+ * Copy booking ID to clipboard
+ */
+function copyBookingId(bookingId) {
+    navigator.clipboard.writeText(bookingId).then(() => {
+        alert('✅ ID de reserva copiado al portapapeles');
+    }).catch(err => {
+        console.error('Error copying to clipboard:', err);
+        // Fallback: show ID in prompt
+        prompt('Copia este ID de reserva:', bookingId);
     });
 }
 
