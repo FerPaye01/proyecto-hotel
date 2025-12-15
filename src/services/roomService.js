@@ -375,6 +375,69 @@ async function updateRoomPricing(actorId, actorRole, roomId, pricing) {
   return updatedRoom;
 }
 
+/**
+ * Delete a room with authorization and audit logging
+ * @param {string} actorId - UUID of the user deleting the room
+ * @param {string} actorRole - Role of the actor (must be 'admin')
+ * @param {number} roomId - Room ID to delete
+ * @returns {Promise<Object>} Deleted room object
+ * @throws {Error} If authorization fails or room not found
+ */
+async function deleteRoom(actorId, actorRole, roomId) {
+  // Verify actor role is 'admin'
+  if (actorRole !== 'admin') {
+    const error = new Error('Insufficient permissions to delete rooms');
+    error.code = 'AUTHORIZATION_ERROR';
+    throw error;
+  }
+
+  // Get room data before deletion for audit log
+  const room = await Room.findById(roomId);
+  
+  if (!room) {
+    throw new Error('Room not found');
+  }
+
+  // Check if room has active bookings
+  const pool = require('../config/database');
+  const bookingCheck = await pool.query(
+    `SELECT COUNT(*) as count FROM bookings 
+     WHERE room_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN')`,
+    [roomId]
+  );
+
+  if (parseInt(bookingCheck.rows[0].count) > 0) {
+    throw new Error('Cannot delete room with active bookings');
+  }
+
+  // Delete room from database
+  const deleted = await Room.delete(roomId);
+
+  if (!deleted) {
+    throw new Error('Failed to delete room');
+  }
+
+  // Create audit log entry
+  await AuditService.logAction(actorId, 'DELETE_ROOM', {
+    previous_value: room,
+    new_value: null,
+    affected_entity_id: roomId.toString(),
+    room_number: room.number,
+    room_type: room.type
+  });
+
+  // Emit WebSocket broadcast to all clients
+  if (io) {
+    io.emit('room_update', {
+      action: 'deleted',
+      room_id: roomId,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  return room;
+}
+
 module.exports = {
   setSocketIO,
   createRoom,
@@ -383,5 +446,6 @@ module.exports = {
   getAllRooms,
   getRoomById,
   updateRoomStatus,
-  updateRoomPricing
+  updateRoomPricing,
+  deleteRoom
 };

@@ -409,6 +409,9 @@ function renderRoomsTable(roomsData, tableBody) {
                 <button class="btn-edit" onclick='openEditPricingModal(${JSON.stringify(room)})' title="Editar precio, tipo e imágenes">
                     ✏️ Editar
                 </button>
+                <button class="btn-delete" onclick="confirmDeleteRoom(${room.id}, '${escapeHtml(room.number)}')" title="Eliminar habitación">
+                    🗑️ Eliminar
+                </button>
             </td>
         `;
         tableBody.appendChild(row);
@@ -1639,3 +1642,57 @@ document.getElementById('pricing-type')?.addEventListener('change', function() {
         image3Group.style.display = 'none';
     }
 });
+
+
+// Confirm and delete room
+function confirmDeleteRoom(roomId, roomNumber) {
+    const confirmed = confirm(
+        `¿Estás seguro de que deseas eliminar la habitación ${roomNumber}?\n\n` +
+        `Esta acción no se puede deshacer.\n` +
+        `No se puede eliminar si tiene reservas activas.`
+    );
+    
+    if (confirmed) {
+        deleteRoom(roomId, roomNumber);
+    }
+}
+
+// Delete room
+async function deleteRoom(roomId, roomNumber) {
+    try {
+        const token = getToken();
+        if (!token) {
+            throw new Error('No hay sesión activa');
+        }
+        
+        const response = await fetch(`${API_BASE}/rooms/${roomId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al eliminar habitación');
+        }
+        
+        // Show success message
+        alert(`Habitación ${roomNumber} eliminada exitosamente`);
+        
+        // Remove room from local array
+        const roomIndex = rooms.findIndex(r => r.id === parseInt(roomId));
+        if (roomIndex !== -1) {
+            rooms.splice(roomIndex, 1);
+        }
+        
+        // Re-render rooms table
+        const tableBody = document.getElementById('rooms-table-body');
+        renderRoomsTable(rooms, tableBody);
+        
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        alert(`Error: ${error.message}`);
+    }
+}

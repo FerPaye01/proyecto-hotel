@@ -206,4 +206,59 @@ router.put('/:id/pricing', authenticateJWT, requireRole('admin'), async (req, re
   }
 });
 
+/**
+ * DELETE /api/rooms/:id
+ * Delete a room (admin only)
+ * Requirements: Admin management
+ */
+router.delete('/:id', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+  try {
+    const roomId = parseInt(req.params.id);
+    
+    if (isNaN(roomId)) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid room ID'
+      });
+    }
+
+    // Call roomService.deleteRoom
+    const deletedRoom = await roomService.deleteRoom(
+      req.user.id,
+      req.user.role,
+      roomId
+    );
+
+    res.status(200).json({ 
+      message: 'Room deleted successfully',
+      room: deletedRoom 
+    });
+  } catch (error) {
+    // Handle authorization errors
+    if (error.code === 'AUTHORIZATION_ERROR') {
+      return res.status(403).json({
+        error: 'AUTHORIZATION_ERROR',
+        message: error.message
+      });
+    }
+    
+    // Handle specific errors
+    if (error.message === 'Room not found') {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: error.message
+      });
+    }
+    
+    if (error.message.includes('active bookings')) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: error.message
+      });
+    }
+    
+    next(error);
+  }
+});
+
 module.exports = router;
