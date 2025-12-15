@@ -434,60 +434,44 @@ async function loadAuditLogs() {
 function renderAuditTable(logs, tableBody) {
     tableBody.innerHTML = '';
     
-    logs.forEach(log => {
+    logs.forEach((log, index) => {
         const row = document.createElement('tr');
         const timestamp = new Date(log.timestamp).toLocaleString('es-ES');
-        const details = formatAuditDetails(log.details);
+        const summary = formatAuditSummary(log.details);
         
         row.innerHTML = `
             <td>${timestamp}</td>
             <td>${log.actor_id ? log.actor_id.substring(0, 8) + '...' : 'Sistema'}</td>
             <td>${escapeHtml(log.action)}</td>
-            <td>${details}</td>
+            <td>${summary}</td>
+            <td><button class="btn-edit" data-log-index="${index}">Ver más</button></td>
         `;
+        
+        // Add click event listener to the button
+        const btn = row.querySelector('.btn-edit');
+        btn.addEventListener('click', () => showAuditDetails(log));
+        
         tableBody.appendChild(row);
     });
 }
 
 /**
- * Format audit details for display
+ * Format audit details summary (short version for table)
  */
-function formatAuditDetails(details) {
+function formatAuditSummary(details) {
     if (!details) return '-';
     
     try {
         const parsed = typeof details === 'string' ? JSON.parse(details) : details;
         const parts = [];
         
-        // User management details
-        if (parsed.target_user_id) {
-            parts.push(`Usuario: ${parsed.target_user_id.substring(0, 8)}...`);
-        }
-        
+        // User management - show only changed fields
         if (parsed.changed_fields && Array.isArray(parsed.changed_fields)) {
             parts.push(`Campos: ${parsed.changed_fields.join(', ')}`);
         }
         
-        if (parsed.previous_values && parsed.new_values) {
-            const changes = [];
-            for (const field in parsed.previous_values) {
-                const prev = parsed.previous_values[field];
-                const newVal = parsed.new_values[field];
-                if (field !== 'password') { // Don't show password values
-                    changes.push(`${field}: "${prev}" → "${newVal}"`);
-                } else {
-                    changes.push(`${field}: [modificado]`);
-                }
-            }
-            if (changes.length > 0) {
-                parts.push(changes.join('; '));
-            }
-        }
-        
-        // Room details
-        if (parsed.room_id) parts.push(`Habitación: ${parsed.room_id}`);
-        
-        // Booking details
+        // Room/Booking IDs
+        if (parsed.room_id) parts.push(`Hab: ${parsed.room_id}`);
         if (parsed.booking_id) {
             const bookingId = typeof parsed.booking_id === 'string' 
                 ? parsed.booking_id.substring(0, 8) + '...'
@@ -495,26 +479,97 @@ function formatAuditDetails(details) {
             parts.push(`Reserva: ${bookingId}`);
         }
         
-        // Generic previous/new values (for non-user operations)
-        if (parsed.previous_value && !parsed.previous_values) {
-            const prev = typeof parsed.previous_value === 'object' 
-                ? JSON.stringify(parsed.previous_value) 
-                : parsed.previous_value;
-            parts.push(`Anterior: ${prev}`);
-        }
-        
-        if (parsed.new_value && !parsed.new_values) {
-            const newVal = typeof parsed.new_value === 'object' 
-                ? JSON.stringify(parsed.new_value) 
-                : parsed.new_value;
-            parts.push(`Nuevo: ${newVal}`);
-        }
-        
-        return parts.length > 0 ? escapeHtml(parts.join(' | ')) : '-';
+        return parts.length > 0 ? escapeHtml(parts.join(' | ')) : 'Ver detalles →';
     } catch (error) {
-        console.error('Error formatting audit details:', error);
-        return escapeHtml(String(details));
+        return 'Ver detalles →';
     }
+}
+
+/**
+ * Show audit log details in modal
+ */
+function showAuditDetails(log) {
+    const modal = document.getElementById('audit-details-modal');
+    const content = document.getElementById('audit-details-content');
+    
+    const timestamp = new Date(log.timestamp).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    
+    const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+    
+    let detailsHtml = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Información General</h3>
+            <p><strong>ID:</strong> ${log.id}</p>
+            <p><strong>Fecha/Hora:</strong> ${timestamp}</p>
+            <p><strong>Actor ID:</strong> ${log.actor_id || 'Sistema'}</p>
+            <p><strong>Acción:</strong> ${escapeHtml(log.action)}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Detalles de la Operación</h3>
+    `;
+    
+    // Format details based on action type
+    if (details.target_user_id) {
+        detailsHtml += `<p><strong>Usuario Objetivo:</strong> ${details.target_user_id}</p>`;
+    }
+    
+    if (details.changed_fields && Array.isArray(details.changed_fields)) {
+        detailsHtml += `<p><strong>Campos Modificados:</strong> ${details.changed_fields.join(', ')}</p>`;
+    }
+    
+    if (details.previous_values) {
+        detailsHtml += `<p><strong>Valores Anteriores:</strong></p>`;
+        detailsHtml += `<pre style="background: #f5f7fa; padding: 10px; border-radius: 6px; overflow-x: auto;">${JSON.stringify(details.previous_values, null, 2)}</pre>`;
+    }
+    
+    if (details.new_values) {
+        detailsHtml += `<p><strong>Valores Nuevos:</strong></p>`;
+        detailsHtml += `<pre style="background: #f5f7fa; padding: 10px; border-radius: 6px; overflow-x: auto;">${JSON.stringify(details.new_values, null, 2)}</pre>`;
+    }
+    
+    if (details.room_id) {
+        detailsHtml += `<p><strong>Habitación ID:</strong> ${details.room_id}</p>`;
+    }
+    
+    if (details.booking_id) {
+        detailsHtml += `<p><strong>Reserva ID:</strong> ${details.booking_id}</p>`;
+    }
+    
+    if (details.previous_value && !details.previous_values) {
+        detailsHtml += `<p><strong>Valor Anterior:</strong></p>`;
+        detailsHtml += `<pre style="background: #f5f7fa; padding: 10px; border-radius: 6px; overflow-x: auto;">${JSON.stringify(details.previous_value, null, 2)}</pre>`;
+    }
+    
+    if (details.new_value && !details.new_values) {
+        detailsHtml += `<p><strong>Valor Nuevo:</strong></p>`;
+        detailsHtml += `<pre style="background: #f5f7fa; padding: 10px; border-radius: 6px; overflow-x: auto;">${JSON.stringify(details.new_value, null, 2)}</pre>`;
+    }
+    
+    detailsHtml += `</div>
+        <div>
+            <h3 style="color: #667eea; margin-bottom: 10px;">JSON Completo</h3>
+            <pre style="background: #f5f7fa; padding: 10px; border-radius: 6px; overflow-x: auto; max-height: 300px;">${JSON.stringify(details, null, 2)}</pre>
+        </div>
+    `;
+    
+    content.innerHTML = detailsHtml;
+    modal.classList.add('show');
+}
+
+/**
+ * Close audit details modal
+ */
+function closeAuditDetailsModal() {
+    const modal = document.getElementById('audit-details-modal');
+    modal.classList.remove('show');
 }
 
 /**
