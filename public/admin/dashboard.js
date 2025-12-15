@@ -609,29 +609,28 @@ function closeAuditDetailsModal() {
  * Load and display reports
  */
 async function loadReports() {
-    const loadingEl = document.getElementById('reports-loading');
-    const contentEl = document.getElementById('reports-content');
-    
-    loadingEl.style.display = 'block';
-    contentEl.style.display = 'none';
+    console.log('Loading financial reports...');
     
     try {
         const response = await fetch(`${API_BASE}/admin/reports/financial`, {
             headers: getAuthHeaders()
         });
         
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
             const report = await response.json();
+            console.log('Financial report loaded successfully:', report);
+            console.log('Occupancy data:', report.occupancy);
+            console.log('Bookings data:', report.bookings);
+            console.log('Revenue data:', report.revenue);
             renderReports(report);
-            loadingEl.style.display = 'none';
-            contentEl.style.display = 'block';
         } else {
-            console.error('Error loading reports');
-            loadingEl.textContent = 'Error al cargar reportes';
+            const errorText = await response.text();
+            console.error('Error loading reports:', response.status, errorText);
         }
     } catch (error) {
         console.error('Error fetching reports:', error);
-        loadingEl.textContent = 'Error de conexión';
     }
 }
 
