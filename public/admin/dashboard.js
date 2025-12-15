@@ -344,7 +344,14 @@ async function handleCreateRoom(event) {
             // Reload rooms list
             loadRooms();
         } else {
-            showMessage(messageEl, 'error', data.message || 'Error al crear habitación');
+            // Handle specific error types
+            if (response.status === 409 && data.error === 'DUPLICATE_ROOM_NUMBER') {
+                showMessage(messageEl, 'error', data.message || `La habitación ${number} ya existe`);
+            } else if (response.status === 403) {
+                showMessage(messageEl, 'error', 'No tienes permisos para crear habitaciones');
+            } else {
+                showMessage(messageEl, 'error', data.message || 'Error al crear habitación');
+            }
         }
     } catch (error) {
         console.error('Error creating room:', error);
@@ -933,129 +940,119 @@ async function loadAuditReport(reportType) {
 /**
  * Render Top Users Report
  */
-function renderTopUsersReport(logs) {
+async function renderTopUsersReport(logs) {
     const tbody = document.getElementById('top-users-body');
-    tbody.innerHTML = '';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">Cargando datos de usuarios...</td></tr>';
     
-    // Filter logs from last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const recentLogs = logs.filter(log => new Date(log.timestamp) >= sevenDaysAgo);
-    
-    // Count actions by user
-    const userStats = {};
-    recentLogs.forEach(log => {
-        const actorId = log.actor_id || 'Sistema';
-        if (!userStats[actorId]) {
-            userStats[actorId] = {
-                count: 0,
-                lastActivity: log.timestamp,
-                email: 'N/A'
-            };
-        }
-        userStats[actorId].count++;
-        if (new Date(log.timestamp) > new Date(userStats[actorId].lastActivity)) {
-            userStats[actorId].lastActivity = log.timestamp;
-        }
-    });
-    
-    // Convert to array and sort by count
-    const sortedUsers = Object.entries(userStats)
-        .map(([id, stats]) => ({ id, ...stats }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-    
-    if (sortedUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay datos en los últimos 7 días</td></tr>';
-        return;
-    }
-    
-    // Render table
-    sortedUsers.forEach(user => {
-        const row = document.createElement('tr');
-        const lastActivity = new Date(user.lastActivity);
-        const now = new Date();
-        const diffMs = now - lastActivity;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
+    try {
+        // Fetch top users data from dedicated endpoint
+        const response = await fetch(`${API_BASE}/admin/reports/top-users`, {
+            headers: getAuthHeaders()
+        });
         
-        let timeAgo;
-        if (diffMins < 60) {
-            timeAgo = `Hace ${diffMins} min`;
-        } else if (diffHours < 24) {
-            timeAgo = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-        } else {
-            timeAgo = `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        row.innerHTML = `
-            <td>${user.id === 'Sistema' ? 'Sistema' : user.id.substring(0, 8) + '...'}</td>
-            <td>${user.email}</td>
-            <td><strong>${user.count}</strong></td>
-            <td>${timeAgo}</td>
-        `;
-        tbody.appendChild(row);
-    });
-    
-    // Create bar chart
-    const barCtx = document.getElementById('top-users-chart');
-    if (barCtx) {
-        if (window.topUsersBarChart) window.topUsersBarChart.destroy();
-        window.topUsersBarChart = new Chart(barCtx, {
-            type: 'bar',
-            data: {
-                labels: sortedUsers.map(u => u.id === 'Sistema' ? 'Sistema' : u.id.substring(0, 8) + '...'),
-                datasets: [{
-                    label: 'Total de Acciones',
-                    data: sortedUsers.map(u => u.count),
-                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false }
+        const data = await response.json();
+        const sortedUsers = data.users || [];
+        
+        tbody.innerHTML = '';
+        
+        if (sortedUsers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay datos en los últimos 7 días</td></tr>';
+            return;
+        }
+        
+        // Render table
+        sortedUsers.forEach(user => {
+            const row = document.createElement('tr');
+            const lastActivity = new Date(user.lastActivity);
+            const now = new Date();
+            const diffMs = now - lastActivity;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            let timeAgo;
+            if (diffMins < 60) {
+                timeAgo = `Hace ${diffMins} min`;
+            } else if (diffHours < 24) {
+                timeAgo = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+            } else {
+                timeAgo = `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+            }
+            
+            row.innerHTML = `
+                <td>${user.id.substring(0, 8) + '...'}</td>
+                <td>${escapeHtml(user.email)}</td>
+                <td><strong>${user.actionCount}</strong></td>
+                <td>${timeAgo}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Create bar chart
+        const barCtx = document.getElementById('top-users-chart');
+        if (barCtx) {
+            if (window.topUsersBarChart) window.topUsersBarChart.destroy();
+            window.topUsersBarChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedUsers.map(u => u.id.substring(0, 8) + '...'),
+                    datasets: [{
+                        label: 'Total de Acciones',
+                        data: sortedUsers.map(u => u.actionCount),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
                 },
-                scales: {
-                    y: { beginAtZero: true }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
                 }
-            }
-        });
-    }
-    
-    // Create pie chart
-    const pieCtx = document.getElementById('top-users-pie-chart');
-    if (pieCtx) {
-        if (window.topUsersPieChart) window.topUsersPieChart.destroy();
-        window.topUsersPieChart = new Chart(pieCtx, {
-            type: 'doughnut',
-            data: {
-                labels: sortedUsers.map(u => u.id === 'Sistema' ? 'Sistema' : u.id.substring(0, 8) + '...'),
-                datasets: [{
-                    data: sortedUsers.map(u => u.count),
-                    backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(118, 75, 162, 0.8)',
-                        'rgba(237, 100, 166, 0.8)',
-                        'rgba(255, 154, 158, 0.8)',
-                        'rgba(255, 198, 128, 0.8)'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'bottom' }
+            });
+        }
+        
+        // Create pie chart
+        const pieCtx = document.getElementById('top-users-pie-chart');
+        if (pieCtx) {
+            if (window.topUsersPieChart) window.topUsersPieChart.destroy();
+            window.topUsersPieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: sortedUsers.map(u => u.id.substring(0, 8) + '...'),
+                    datasets: [{
+                        data: sortedUsers.map(u => u.actionCount),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(237, 100, 166, 0.8)',
+                            'rgba(255, 154, 158, 0.8)',
+                            'rgba(255, 198, 128, 0.8)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Error loading top users report:', error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #e74c3c;">Error al cargar datos de usuarios</td></tr>';
     }
 }
 

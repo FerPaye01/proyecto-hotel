@@ -71,6 +71,22 @@ router.post('/', authenticateJWT, requireRole('admin'), async (req, res, next) =
 
     res.status(201).json({ room });
   } catch (error) {
+    // Handle duplicate room number error
+    if (error.code === 'DUPLICATE_ROOM_NUMBER') {
+      return res.status(409).json({
+        error: 'DUPLICATE_ROOM_NUMBER',
+        message: error.message
+      });
+    }
+    
+    // Handle authorization errors
+    if (error.code === 'AUTHORIZATION_ERROR') {
+      return res.status(403).json({
+        error: 'AUTHORIZATION_ERROR',
+        message: error.message
+      });
+    }
+    
     next(error);
   }
 });

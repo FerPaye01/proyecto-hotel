@@ -70,15 +70,28 @@ async function createRoom(actorId, actorRole, roomData) {
   }
 
   // Create room in database
-  const newRoom = await Room.create({
-    number,
-    type,
-    price_per_night,
-    status,
-    image_1,
-    image_2,
-    image_3
-  });
+  let newRoom;
+  try {
+    newRoom = await Room.create({
+      number,
+      type,
+      price_per_night,
+      status,
+      image_1,
+      image_2,
+      image_3
+    });
+  } catch (dbError) {
+    // Handle PostgreSQL unique constraint violation
+    if (dbError.code === '23505' && dbError.constraint === 'rooms_number_key') {
+      const error = new Error(`La habitación con número "${number}" ya existe. Por favor, use un número diferente.`);
+      error.code = 'DUPLICATE_ROOM_NUMBER';
+      error.statusCode = 409;
+      throw error;
+    }
+    // Re-throw other database errors
+    throw dbError;
+  }
 
   // Log the action to audit trail
   await AuditService.logAction(actorId, 'CREATE_ROOM', {

@@ -170,6 +170,47 @@ router.get('/reports/financial', authenticateJWT, requireRole('admin'), async (r
 });
 
 /**
+ * GET /api/admin/reports/top-users
+ * Get top 5 most active users in the last 7 days (admin only)
+ */
+router.get('/reports/top-users', authenticateJWT, requireRole('admin'), async (req, res, next) => {
+  try {
+    const pool = require('../config/database');
+    
+    // Get top users by activity in last 7 days
+    const query = `
+      SELECT 
+        a.actor_id,
+        u.email,
+        u.full_name,
+        COUNT(*) as action_count,
+        MAX(a.timestamp) as last_activity
+      FROM audit_logs a
+      LEFT JOIN users u ON a.actor_id = u.id
+      WHERE a.timestamp >= NOW() - INTERVAL '7 days'
+        AND a.actor_id IS NOT NULL
+      GROUP BY a.actor_id, u.email, u.full_name
+      ORDER BY action_count DESC
+      LIMIT 5
+    `;
+    
+    const result = await pool.query(query);
+    
+    res.status(200).json({
+      users: result.rows.map(row => ({
+        id: row.actor_id,
+        email: row.email || 'N/A',
+        full_name: row.full_name || 'N/A',
+        actionCount: parseInt(row.action_count),
+        lastActivity: row.last_activity
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/admin/users
  * Get all users with role information (admin only)
  * Requirements: 4.1
