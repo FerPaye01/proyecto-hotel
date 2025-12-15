@@ -11,40 +11,45 @@ const pool = require('../src/config/database');
 const { hashPassword } = require('../src/utils/password');
 
 /**
- * Seed initial admin user
+ * Seed initial users (admin, staff, client)
  */
-async function seedAdminUser() {
-  console.log('[SEED] Creating admin user...');
+async function seedUsers() {
+  console.log('[SEED] Creating initial users...');
   
-  const email = 'admin@hotel.com';
-  const plainPassword = 'admin123';
-  const role = 'admin';
-  const fullName = 'System Administrator';
+  const users = [
+    { email: 'admin@hotel.com', password: 'admin123', role: 'admin', fullName: 'System Administrator' },
+    { email: 'staff@hotel.com', password: 'staff123', role: 'staff', fullName: 'Hotel Staff' },
+    { email: 'client@hotel.com', password: 'client123', role: 'client', fullName: 'Test Client' }
+  ];
 
   try {
-    // Check if admin already exists
-    const checkQuery = 'SELECT id FROM users WHERE email = $1';
-    const checkResult = await pool.query(checkQuery, [email]);
+    for (const user of users) {
+      // Check if user already exists
+      const checkQuery = 'SELECT id FROM users WHERE email = $1';
+      const checkResult = await pool.query(checkQuery, [user.email]);
 
-    if (checkResult.rows.length > 0) {
-      console.log('[SEED] Admin user already exists, skipping...');
-      return;
+      if (checkResult.rows.length > 0) {
+        console.log(`[SEED] User ${user.email} already exists, skipping...`);
+        continue;
+      }
+
+      // Hash password before insertion
+      const passwordHash = await hashPassword(user.password);
+
+      // Insert user
+      const insertQuery = `
+        INSERT INTO users (email, password_hash, role, full_name)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, email, role, full_name
+      `;
+      const result = await pool.query(insertQuery, [user.email, passwordHash, user.role, user.fullName]);
+
+      console.log(`[SEED] User created:`, result.rows[0]);
     }
 
-    // Hash password before insertion
-    const passwordHash = await hashPassword(plainPassword);
-
-    // Insert admin user
-    const insertQuery = `
-      INSERT INTO users (email, password_hash, role, full_name)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, email, role, full_name
-    `;
-    const result = await pool.query(insertQuery, [email, passwordHash, role, fullName]);
-
-    console.log('[SEED] Admin user created successfully:', result.rows[0]);
+    console.log('[SEED] All users created successfully');
   } catch (error) {
-    console.error('[SEED] Error creating admin user:', error.message);
+    console.error('[SEED] Error creating users:', error.message);
     throw error;
   }
 }
@@ -114,8 +119,8 @@ async function seed() {
     await pool.query('SELECT NOW()');
     console.log('[SEED] Database connection successful');
 
-    // Seed admin user
-    await seedAdminUser();
+    // Seed users
+    await seedUsers();
 
     // Seed sample rooms
     await seedRooms();
@@ -123,9 +128,10 @@ async function seed() {
     console.log('[SEED] ================================');
     console.log('[SEED] Database seeding completed successfully!');
     console.log('[SEED] ');
-    console.log('[SEED] Admin credentials:');
-    console.log('[SEED]   Email: admin@hotel.com');
-    console.log('[SEED]   Password: admin123');
+    console.log('[SEED] Test credentials:');
+    console.log('[SEED]   Admin  - admin@hotel.com  / admin123');
+    console.log('[SEED]   Staff  - staff@hotel.com  / staff123');
+    console.log('[SEED]   Client - client@hotel.com / client123');
     console.log('[SEED] ');
     
     process.exit(0);
@@ -142,4 +148,4 @@ if (require.main === module) {
   seed();
 }
 
-module.exports = { seed, seedAdminUser, seedRooms };
+module.exports = { seed, seedUsers, seedRooms };

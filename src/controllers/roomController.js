@@ -6,7 +6,7 @@
 
 const express = require('express');
 const roomService = require('../services/roomService');
-const { authenticateJWT } = require('../middleware/auth');
+const { authenticateJWT, optionalAuth } = require('../middleware/auth');
 const { requireRole, requireAnyRole } = require('../middleware/rbac');
 
 const router = express.Router();
@@ -26,9 +26,10 @@ router.get('/', authenticateJWT, async (req, res, next) => {
 
 /**
  * GET /api/rooms/available
- * Get all available rooms (authenticated users)
+ * Get all available rooms (public access allowed, authentication optional)
+ * This endpoint is public to allow visitors to browse and quote rooms
  */
-router.get('/available', authenticateJWT, async (req, res, next) => {
+router.get('/available', optionalAuth, async (req, res, next) => {
   try {
     const rooms = await roomService.getRoomsByStatus('AVAILABLE');
     res.status(200).json({ rooms });

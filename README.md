@@ -502,13 +502,17 @@ El script de seed crea:
 node scripts/seed.js
 ```
 
-**Credenciales del Administrador:**
-```
-Email: admin@hotel.com
-Contraseña: admin123
-```
+### Credenciales de Prueba
 
-**⚠️ Importante:** Cambia la contraseña del admin después del primer login en producción.
+El script de seed crea usuarios de ejemplo para cada rol:
+
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| **Admin** | admin@hotel.com | admin123 |
+| **Staff** | staff@hotel.com | staff123 |
+| **Client** | client@hotel.com | client123 |
+
+**⚠️ Importante:** Cambia estas contraseñas después del primer login en producción.
 
 ### Paso 7: Iniciar el Servidor
 
@@ -748,6 +752,46 @@ Las actualizaciones son **automáticas en tiempo real** vía WebSocket.
 Ver [ROOM_STATE_MACHINE.md](ROOM_STATE_MACHINE.md) para todas las reglas.
 
 ### Para Clientes
+
+#### 🌐 Modo Público (Sin Autenticación)
+
+El portal de reservas está disponible públicamente para que cualquier visitante pueda explorar habitaciones y cotizar precios **sin necesidad de crear una cuenta**.
+
+**Acceso público:**
+```
+https://proyecto-hotel-tpma.onrender.com/client/booking.html
+```
+
+**Funcionalidades disponibles en modo público:**
+- ✅ Buscar habitaciones por fechas
+- ✅ Ver habitaciones disponibles con imágenes
+- ✅ Explorar galería de imágenes (carrusel)
+- ✅ Cotizar precios (ver cálculo detallado)
+- ✅ Ver precio por noche, número de noches y total
+
+**Restricciones en modo público:**
+- ❌ No puede realizar reservas (requiere login)
+- ❌ No puede ver historial de reservas
+- ❌ No puede acceder al perfil de usuario
+- ❌ No recibe actualizaciones en tiempo real (WebSocket)
+
+**Indicadores visuales del modo público:**
+- Banner amarillo informativo en la parte superior
+- Header muestra "👁️ Modo Público (Solo Cotización)"
+- Botón "Mi Perfil" deshabilitado
+- Botón "Iniciar Sesión" en lugar de "Cerrar Sesión"
+- Pestaña "Mis Reservas" oculta
+
+**Flujo de conversión:**
+1. Visitante explora habitaciones sin login
+2. Selecciona una habitación y ve cotización detallada
+3. Al intentar reservar, se muestra botón "🔐 Iniciar Sesión"
+4. Es redirigido a `/login.html`
+5. Después de autenticarse, puede realizar reservas
+
+**Nota:** Los clientes NO pueden auto-registrarse. Un administrador debe crear su cuenta primero.
+
+---
 
 #### 1. Buscar Habitaciones Disponibles
 

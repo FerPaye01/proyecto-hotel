@@ -139,8 +139,14 @@ function requireAuth() {
 /**
  * Require specific role - redirect to login if user doesn't have the role
  * @param {string} requiredRole - The role required to access the page
+ * @param {boolean} allowPublic - If true, allows public access without authentication
  */
-function requireRole(requiredRole) {
+function requireRole(requiredRole, allowPublic = false) {
+    // If public access is allowed and user is not authenticated, skip role check
+    if (allowPublic && !isAuthenticated()) {
+        return;
+    }
+    
     requireAuth();
     
     const userRole = getUserRole();
@@ -148,6 +154,14 @@ function requireRole(requiredRole) {
         alert('No tienes permisos para acceder a esta página');
         logout();
     }
+}
+
+/**
+ * Check if the current user is in public mode (not authenticated)
+ * @returns {boolean} True if in public mode, false if authenticated
+ */
+function isPublicMode() {
+    return !isAuthenticated();
 }
 
 /**
@@ -175,6 +189,7 @@ if (typeof module !== 'undefined' && module.exports) {
         logout,
         requireAuth,
         requireRole,
-        getAuthHeaders
+        getAuthHeaders,
+        isPublicMode
     };
 }

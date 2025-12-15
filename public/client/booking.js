@@ -14,11 +14,17 @@ let searchDates = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Require client authentication
-    requireRole('client');
+    // Allow public access (no authentication required)
+    requireRole('client', true);
     
-    // Display user info
+    // Check if in public mode
+    const publicMode = isPublicMode();
+    
+    // Display user info or public mode indicator
     displayUserInfo();
+    
+    // Configure UI based on mode
+    configurePublicMode(publicMode);
     
     // Set minimum date to today (allow same-day bookings for testing)
     const today = new Date();
@@ -30,11 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize tab navigation
     initializeTabs();
     
-    // Initialize Socket.IO connection
-    initializeSocket(onSocketConnect, onSocketDisconnect);
-    
-    // Load booking history
-    loadBookingHistory();
+    // Initialize Socket.IO connection only if authenticated
+    if (!publicMode) {
+        initializeSocket(onSocketConnect, onSocketDisconnect);
+        // Load booking history only if authenticated
+        loadBookingHistory();
+    }
     
     // Set up form handlers
     document.getElementById('search-rooms-form').addEventListener('submit', handleSearchRooms);
@@ -59,6 +66,50 @@ function displayUserInfo() {
     const userId = getUserId();
     if (userId) {
         userInfo.textContent = `Usuario: ${userId.substring(0, 8)}...`;
+    } else {
+        userInfo.textContent = '👁️ Modo Público (Solo Cotización)';
+    }
+}
+
+/**
+ * Configure UI for public mode
+ */
+function configurePublicMode(isPublic) {
+    if (isPublic) {
+        // Hide/disable profile button
+        const profileBtn = document.querySelector('button[onclick="openProfileModal()"]');
+        if (profileBtn) {
+            profileBtn.disabled = true;
+            profileBtn.style.opacity = '0.5';
+            profileBtn.style.cursor = 'not-allowed';
+            profileBtn.title = 'Inicia sesión para acceder a tu perfil';
+        }
+        
+        // Change logout button to login button
+        const logoutBtn = document.querySelector('button[onclick="logout()"]');
+        if (logoutBtn) {
+            logoutBtn.textContent = 'Iniciar Sesión';
+            logoutBtn.onclick = () => window.location.href = '/login.html';
+        }
+        
+        // Hide "Mis Reservas" tab
+        const historyTab = document.querySelector('[data-tab="history"]');
+        if (historyTab) {
+            historyTab.style.display = 'none';
+        }
+        
+        // Add public mode notice
+        const bookingCard = document.querySelector('#booking-tab .card');
+        if (bookingCard) {
+            const notice = document.createElement('div');
+            notice.style.cssText = 'background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;';
+            notice.innerHTML = `
+                <strong>ℹ️ Modo Público:</strong> Puedes explorar habitaciones y cotizar precios. 
+                <a href="/login.html" style="color: #667eea; font-weight: 600; text-decoration: underline;">Inicia sesión</a> 
+                para realizar reservas.
+            `;
+            bookingCard.insertBefore(notice, bookingCard.firstChild);
+        }
     }
 }
 
@@ -164,9 +215,12 @@ async function fetchAvailableRooms() {
     roomsEmpty.style.display = 'none';
     
     try {
+        // Use public endpoint if not authenticated
+        const headers = isPublicMode() ? { 'Content-Type': 'application/json' } : getAuthHeaders();
+        
         const response = await fetch('/api/rooms/available', {
             method: 'GET',
-            headers: getAuthHeaders()
+            headers: headers
         });
         
         if (!response.ok) {
@@ -239,6 +293,12 @@ function selectRoom(room) {
     });
     event.target.closest('.room-card').classList.add('selected');
     
+    // In public mode, only show cost preview, not booking form
+    if (isPublicMode()) {
+        showPublicCostPreview(room);
+        return;
+    }
+    
     // Show booking form
     const bookingFormSection = document.getElementById('booking-form-section');
     bookingFormSection.style.display = 'block';
@@ -254,6 +314,74 @@ function selectRoom(room) {
     
     // Scroll to booking form
     bookingFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Show cost preview for public users (without booking form)
+ */
+function showPublicCostPreview(room) {
+    // Remove existing preview if any
+    const existingPreview = document.getElementById('public-cost-preview');
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+    
+    // Calculate cost
+    const checkInDate = new Date(searchDates.checkIn);
+    const checkOutDate = new Date(searchDates.checkOut);
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+    const totalCost = room.price_per_night * nights;
+    
+    // Create preview card
+    const previewCard = document.createElement('div');
+    previewCard.id = 'public-cost-preview';
+    previewCard.className = 'card';
+    previewCard.style.cssText = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-top: 20px;';
+    previewCard.innerHTML = `
+        <h2 style="color: white; margin-bottom: 20px;">💰 Cotización de Reserva</h2>
+        <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1.1rem;">
+                <span>Habitación:</span>
+                <strong>Hab. ${room.number} - ${room.type}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span>Check-in:</span>
+                <strong>${formatDate(searchDates.checkIn)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span>Check-out:</span>
+                <strong>${formatDate(searchDates.checkOut)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span>Precio por noche:</span>
+                <strong>${parseFloat(room.price_per_night).toFixed(2)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span>Número de noches:</span>
+                <strong>${nights}</strong>
+            </div>
+            <div style="border-top: 2px solid rgba(255,255,255,0.3); padding-top: 15px; margin-top: 15px; display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 700;">
+                <span>TOTAL:</span>
+                <span>${totalCost.toFixed(2)}</span>
+            </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 20px; margin-top: 20px; text-align: center;">
+            <p style="margin-bottom: 15px; font-size: 1.05rem;">
+                <strong>¿Listo para reservar?</strong><br>
+                Inicia sesión para confirmar tu reserva
+            </p>
+            <a href="/login.html" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 15px rgba(102,126,234,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                🔐 Iniciar Sesión
+            </a>
+        </div>
+    `;
+    
+    // Insert after available rooms section
+    const roomsSection = document.getElementById('available-rooms-section');
+    roomsSection.parentNode.insertBefore(previewCard, roomsSection.nextSibling);
+    
+    // Scroll to preview
+    previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /**
@@ -275,6 +403,15 @@ function calculateCost(pricePerNight, checkIn, checkOut) {
  */
 async function handleCreateBooking(event) {
     event.preventDefault();
+    
+    // Block booking in public mode
+    if (isPublicMode()) {
+        showMessage('booking-message', 'Debes iniciar sesión para realizar una reserva', 'error');
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 2000);
+        return;
+    }
     
     if (!selectedRoom) {
         showMessage('booking-message', 'Por favor selecciona una habitación', 'error');

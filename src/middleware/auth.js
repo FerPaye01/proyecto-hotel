@@ -145,4 +145,59 @@ async function authenticateSocket(socket) {
   }
 }
 
-module.exports = { authenticateJWT, authenticateSocket };
+/**
+ * Optional authentication middleware
+ * Allows public access but attaches user info if token is present
+ * Used for endpoints that can be accessed both publicly and by authenticated users
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    // If no auth header, continue as public user
+    if (!authHeader) {
+      req.user = null;
+      return next();
+    }
+
+    const parts = authHeader.split(' ');
+    
+    // If invalid format, continue as public user
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      req.user = null;
+      return next();
+    }
+
+    const token = parts[1];
+
+    // Try to verify token
+    const decoded = verifyToken(token);
+    
+    if (decoded) {
+      // Verify expiration timestamp
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp >= currentTime) {
+        // Valid token - attach user information
+        req.user = {
+          id: decoded.userId,
+          role: decoded.role
+        };
+      } else {
+        // Expired token - continue as public user
+        req.user = null;
+      }
+    } else {
+      // Invalid token - continue as public user
+      req.user = null;
+    }
+
+    next();
+  } catch (error) {
+    // On any error, continue as public user
+    req.user = null;
+    next();
+  }
+}
+
+module.exports = { authenticateJWT, authenticateSocket, optionalAuth };
