@@ -1431,6 +1431,9 @@ function getChartsForReport(reportName) {
 
 // Open edit pricing modal
 function openEditPricingModal(room) {
+    console.log('Opening edit modal for room:', room);
+    console.log('Room images:', { image_1: room.image_1, image_2: room.image_2, image_3: room.image_3 });
+    
     const modal = document.getElementById('edit-pricing-modal');
     if (modal) {
         modal.classList.add('show');

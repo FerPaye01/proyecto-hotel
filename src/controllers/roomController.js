@@ -43,7 +43,7 @@ router.get('/available', authenticateJWT, async (req, res, next) => {
  */
 router.post('/', authenticateJWT, requireRole('admin'), async (req, res, next) => {
   try {
-    const { number, type, price_per_night, status } = req.body;
+    const { number, type, price_per_night, status, image_1, image_2, image_3 } = req.body;
 
     // Validate request body
     if (!number || !type || !price_per_night) {
@@ -53,13 +53,21 @@ router.post('/', authenticateJWT, requireRole('admin'), async (req, res, next) =
       });
     }
 
-    // Create room using service
-    const room = await roomService.createRoom(req.user.id, req.user.role, {
+    // Build room data object
+    const roomData = {
       number,
       type,
       price_per_night,
       status
-    });
+    };
+
+    // Add images if provided
+    if (image_1) roomData.image_1 = image_1;
+    if (image_2) roomData.image_2 = image_2;
+    if (image_3) roomData.image_3 = image_3;
+
+    // Create room using service
+    const room = await roomService.createRoom(req.user.id, req.user.role, roomData);
 
     res.status(201).json({ room });
   } catch (error) {
