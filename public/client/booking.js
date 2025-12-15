@@ -201,9 +201,10 @@ function renderRooms(rooms) {
     rooms.forEach(room => {
         const roomCard = document.createElement('div');
         roomCard.className = 'room-card';
-        // Add background image if available
-        if (room.image_url) {
-            roomCard.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url(${room.image_url})`;
+        // Add background image if available (use image_1 from database)
+        const roomImage = room.image_1 || room.image_url;
+        if (roomImage) {
+            roomCard.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url(${roomImage})`;
             roomCard.style.backgroundSize = 'cover';
             roomCard.style.backgroundPosition = 'center';
             roomCard.style.color = 'white';
@@ -219,7 +220,7 @@ function renderRooms(rooms) {
             </div>
             <div class="room-price">${parseFloat(room.price_per_night).toFixed(2)} / noche</div>
             <div class="room-status available">Disponible</div>
-            ${room.image_url ? `<div class="room-view-image" onclick="event.stopPropagation(); viewRoomImage('${room.number}', '${room.image_url}', '${room.type}', ${room.price_per_night})"> Ver imagen completa</div>` : ''}
+            ${roomImage ? `<div class="room-view-image" onclick="event.stopPropagation(); viewRoomImage('${room.number}', '${roomImage}', '${room.type}', ${room.price_per_night}')">🔍 Ver imagen completa</div>` : ''}
         `;
         
         roomsGrid.appendChild(roomCard);
