@@ -410,6 +410,9 @@ async function loadAuditLogs() {
             const data = await response.json();
             const logs = data.logs || [];
             
+            // Cache logs for reports
+            cachedAuditLogs = logs;
+            
             if (logs.length === 0) {
                 loadingEl.style.display = 'none';
                 emptyEl.style.display = 'block';
@@ -790,6 +793,9 @@ function toggleCollapsible(header) {
     }
 }
 
+// Cache for audit logs
+let cachedAuditLogs = null;
+
 /**
  * Load audit report data
  */
@@ -797,40 +803,59 @@ async function loadAuditReport(reportType) {
     const loadingEl = document.getElementById(`${reportType}-loading`);
     const contentEl = document.getElementById(`${reportType}-content`);
     
+    if (!loadingEl || !contentEl) {
+        console.error(`Elements not found for report type: ${reportType}`);
+        return;
+    }
+    
     // Skip if already loaded
     if (contentEl.style.display === 'block') return;
     
     loadingEl.style.display = 'block';
+    loadingEl.textContent = 'Cargando datos...';
     
     try {
-        const response = await fetch(`${API_BASE}/admin/audit-logs`, {
-            headers: getAuthHeaders()
-        });
+        // Use cached data if available
+        let logs = cachedAuditLogs;
         
-        if (response.ok) {
-            const data = await response.json();
-            const logs = data.logs || [];
+        // Fetch if not cached
+        if (!logs) {
+            const response = await fetch(`${API_BASE}/admin/audit-logs`, {
+                headers: getAuthHeaders()
+            });
             
-            switch(reportType) {
-                case 'top-users':
-                    renderTopUsersReport(logs);
-                    break;
-                case 'critical-changes':
-                    renderCriticalChangesReport(logs);
-                    break;
-                case 'activity-by-type':
-                    renderActivityByTypeReport(logs);
-                    break;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             
-            loadingEl.style.display = 'none';
-            contentEl.style.display = 'block';
-        } else {
-            loadingEl.textContent = 'Error al cargar datos';
+            const data = await response.json();
+            logs = data.logs || [];
+            cachedAuditLogs = logs; // Cache the data
         }
+        
+        // Render based on report type
+        switch(reportType) {
+            case 'top-users':
+                renderTopUsersReport(logs);
+                break;
+            case 'critical-changes':
+                renderCriticalChangesReport(logs);
+                break;
+            case 'activity-by-type':
+                renderActivityByTypeReport(logs);
+                break;
+            default:
+                console.error(`Unknown report type: ${reportType}`);
+                loadingEl.textContent = 'Tipo de reporte desconocido';
+                return;
+        }
+        
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
     } catch (error) {
         console.error('Error loading audit report:', error);
-        loadingEl.textContent = 'Error de conexión';
+        loadingEl.textContent = `Error: ${error.message}`;
+        loadingEl.style.display = 'block';
     }
 }
 
