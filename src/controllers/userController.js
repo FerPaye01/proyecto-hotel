@@ -41,6 +41,38 @@ router.post('/',
 );
 
 /**
+ * PUT /api/users/profile
+ * Update own profile (authenticated users)
+ * Requirements: 5.4
+ * NOTE: This route must come BEFORE /:id to avoid route conflicts
+ */
+router.put('/profile',
+  authenticateJWT,
+  async (req, res, next) => {
+    try {
+      const { full_name, email, password, currentPassword } = req.body;
+      
+      const updates = {};
+      if (full_name !== undefined) updates.full_name = full_name;
+      if (email !== undefined) updates.email = email;
+      if (password !== undefined) updates.password = password;
+
+      // Call userService.updateOwnProfile
+      const result = await userService.updateOwnProfile(
+        req.user.id,
+        updates,
+        currentPassword
+      );
+
+      // Return updated profile
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * PUT /api/users/:id
  * Update an existing user (admin only)
  * Requirements: 4.1
@@ -63,37 +95,6 @@ router.put('/:id',
       );
 
       // Return updated user
-      res.status(200).json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * PUT /api/profile
- * Update own profile (authenticated users)
- * Requirements: 5.4
- */
-router.put('/profile',
-  authenticateJWT,
-  async (req, res, next) => {
-    try {
-      const { full_name, email, password, currentPassword } = req.body;
-      
-      const updates = {};
-      if (full_name !== undefined) updates.full_name = full_name;
-      if (email !== undefined) updates.email = email;
-      if (password !== undefined) updates.password = password;
-
-      // Call userService.updateOwnProfile
-      const result = await userService.updateOwnProfile(
-        req.user.id,
-        updates,
-        currentPassword
-      );
-
-      // Return updated profile
       res.status(200).json(result);
     } catch (error) {
       next(error);
