@@ -751,3 +751,300 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+/**
+ * Toggle collapsible section
+ */
+function toggleCollapsible(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.collapsible-icon');
+    
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    // Load data when opening for the first time
+    if (content.classList.contains('active')) {
+        const sectionId = content.querySelector('[id$="-loading"]').id.replace('-loading', '');
+        loadAuditReport(sectionId);
+    }
+}
+
+/**
+ * Load audit report data
+ */
+async function loadAuditReport(reportType) {
+    const loadingEl = document.getElementById(`${reportType}-loading`);
+    const contentEl = document.getElementById(`${reportType}-content`);
+    
+    // Skip if already loaded
+    if (contentEl.style.display === 'block') return;
+    
+    loadingEl.style.display = 'block';
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/audit-logs`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const logs = data.logs || [];
+            
+            switch(reportType) {
+                case 'top-users':
+                    renderTopUsersReport(logs);
+                    break;
+                case 'critical-changes':
+                    renderCriticalChangesReport(logs);
+                    break;
+                case 'activity-by-type':
+                    renderActivityByTypeReport(logs);
+                    break;
+            }
+            
+            loadingEl.style.display = 'none';
+            contentEl.style.display = 'block';
+        } else {
+            loadingEl.textContent = 'Error al cargar datos';
+        }
+    } catch (error) {
+        console.error('Error loading audit report:', error);
+        loadingEl.textContent = 'Error de conexión';
+    }
+}
+
+/**
+ * Render Top Users Report
+ */
+function renderTopUsersReport(logs) {
+    const tbody = document.getElementById('top-users-body');
+    tbody.innerHTML = '';
+    
+    // Filter logs from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const recentLogs = logs.filter(log => new Date(log.timestamp) >= sevenDaysAgo);
+    
+    // Count actions by user
+    const userStats = {};
+    recentLogs.forEach(log => {
+        const actorId = log.actor_id || 'Sistema';
+        if (!userStats[actorId]) {
+            userStats[actorId] = {
+                count: 0,
+                lastActivity: log.timestamp,
+                email: 'N/A'
+            };
+        }
+        userStats[actorId].count++;
+        if (new Date(log.timestamp) > new Date(userStats[actorId].lastActivity)) {
+            userStats[actorId].lastActivity = log.timestamp;
+        }
+    });
+    
+    // Convert to array and sort by count
+    const sortedUsers = Object.entries(userStats)
+        .map(([id, stats]) => ({ id, ...stats }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    
+    if (sortedUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay datos en los últimos 7 días</td></tr>';
+        return;
+    }
+    
+    sortedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        const lastActivity = new Date(user.lastActivity);
+        const now = new Date();
+        const diffMs = now - lastActivity;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        let timeAgo;
+        if (diffMins < 60) {
+            timeAgo = `Hace ${diffMins} min`;
+        } else if (diffHours < 24) {
+            timeAgo = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+        } else {
+            timeAgo = `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+        }
+        
+        row.innerHTML = `
+            <td>${user.id === 'Sistema' ? 'Sistema' : user.id.substring(0, 8) + '...'}</td>
+            <td>${user.email}</td>
+            <td><strong>${user.count}</strong></td>
+            <td>${timeAgo}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Render Critical Changes Report
+ */
+function renderCriticalChangesReport(logs) {
+    const tbody = document.getElementById('critical-changes-body');
+    tbody.innerHTML = '';
+    
+    // Filter logs from last 24 hours
+    const oneDayAgo = new Date();
+    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+    
+    // Critical actions
+    const criticalActions = ['USER_UPDATE', 'USER_CREATE', 'CREATE_ROOM', 'UPDATE_ROOM'];
+    
+    const criticalLogs = logs.filter(log => 
+        new Date(log.timestamp) >= oneDayAgo && 
+        criticalActions.includes(log.action)
+    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (criticalLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay cambios críticos en las últimas 24 horas</td></tr>';
+        return;
+    }
+    
+    criticalLogs.forEach(log => {
+        const row = document.createElement('tr');
+        const timestamp = new Date(log.timestamp).toLocaleString('es-ES');
+        const summary = formatAuditSummary(log.details);
+        
+        row.innerHTML = `
+            <td>${timestamp}</td>
+            <td>${log.actor_id ? log.actor_id.substring(0, 8) + '...' : 'Sistema'}</td>
+            <td><span class="badge badge-admin">${escapeHtml(log.action)}</span></td>
+            <td>${summary}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Render Activity by Type Report
+ */
+function renderActivityByTypeReport(logs) {
+    const tbody = document.getElementById('activity-by-type-body');
+    tbody.innerHTML = '';
+    
+    // Filter logs from last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentLogs = logs.filter(log => new Date(log.timestamp) >= thirtyDaysAgo);
+    
+    // Count by action type
+    const actionCounts = {};
+    recentLogs.forEach(log => {
+        actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+    });
+    
+    const total = recentLogs.length;
+    
+    // Convert to array and sort by count
+    const sortedActions = Object.entries(actionCounts)
+        .map(([action, count]) => ({
+            action,
+            count,
+            percentage: ((count / total) * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.count - a.count);
+    
+    if (sortedActions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">No hay datos en los últimos 30 días</td></tr>';
+        return;
+    }
+    
+    sortedActions.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${escapeHtml(item.action)}</strong></td>
+            <td>${item.count}</td>
+            <td>${item.percentage}%</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Export report to different formats
+ */
+function exportReport(reportType, format) {
+    const tableId = `${reportType}-table`;
+    const table = document.getElementById(tableId);
+    
+    if (!table) {
+        alert('No hay datos para exportar');
+        return;
+    }
+    
+    switch(format) {
+        case 'excel':
+        case 'csv':
+            exportToCSV(table, reportType);
+            break;
+        case 'pdf':
+            exportToPDF(table, reportType);
+            break;
+    }
+}
+
+/**
+ * Export table to CSV
+ */
+function exportToCSV(table, reportName) {
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('td, th');
+        const csvRow = [];
+        cols.forEach(col => {
+            csvRow.push('"' + col.textContent.trim().replace(/"/g, '""') + '"');
+        });
+        csv.push(csvRow.join(','));
+    });
+    
+    const csvContent = csv.join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${reportName}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+/**
+ * Export table to PDF (simple version using print)
+ */
+function exportToPDF(table, reportName) {
+    // Create a new window with the table
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    printWindow.document.write('<html><head><title>' + reportName + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; }');
+    printWindow.document.write('h1 { color: #667eea; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }');
+    printWindow.document.write('th { background-color: #667eea; color: white; }');
+    printWindow.document.write('tr:nth-child(even) { background-color: #f9f9f9; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h1>Reporte: ' + reportName + '</h1>');
+    printWindow.document.write('<p>Fecha: ' + new Date().toLocaleDateString('es-ES') + '</p>');
+    printWindow.document.write(table.outerHTML);
+    printWindow.document.write('</body></html>');
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
