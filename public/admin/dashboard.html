@@ -1024,6 +1024,34 @@
                     <label for="pricing-price">Precio por Noche ($)</label>
                     <input type="number" id="pricing-price" step="0.01" min="0" required />
                 </div>
+                
+                <div class="form-section">
+                    <h3>Actualizar Imágenes</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                        Deja en blanco para mantener las imágenes actuales
+                    </p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit-image-1">Imagen Principal</label>
+                            <input type="file" id="edit-image-1" accept="image/*" onchange="previewImage(this, 'edit-preview-1')">
+                            <img id="edit-preview-1" class="image-preview" style="display:none; max-width: 150px; margin-top: 10px;">
+                            <div id="current-image-1" style="margin-top: 10px;"></div>
+                        </div>
+                        <div class="form-group" id="edit-image-2-group">
+                            <label for="edit-image-2">Imagen 2 (Solo Suite)</label>
+                            <input type="file" id="edit-image-2" accept="image/*" onchange="previewImage(this, 'edit-preview-2')">
+                            <img id="edit-preview-2" class="image-preview" style="display:none; max-width: 150px; margin-top: 10px;">
+                            <div id="current-image-2" style="margin-top: 10px;"></div>
+                        </div>
+                        <div class="form-group" id="edit-image-3-group">
+                            <label for="edit-image-3">Imagen 3 (Solo Suite)</label>
+                            <input type="file" id="edit-image-3" accept="image/*" onchange="previewImage(this, 'edit-preview-3')">
+                            <img id="edit-preview-3" class="image-preview" style="display:none; max-width: 150px; margin-top: 10px;">
+                            <div id="current-image-3" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="closeEditPricingModal()">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar Cambios</button>

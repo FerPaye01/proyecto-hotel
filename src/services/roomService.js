@@ -278,6 +278,9 @@ async function updateRoomStatus(actorId, actorRole, roomId, newStatus) {
  * @param {Object} pricing - Pricing data to update
  * @param {number} [pricing.price_per_night] - New price per night
  * @param {string} [pricing.type] - New room type (simple, doble, suite)
+ * @param {string} [pricing.image_1] - Primary image (base64 or URL)
+ * @param {string} [pricing.image_2] - Second image for suites (base64 or URL)
+ * @param {string} [pricing.image_3] - Third image for suites (base64 or URL)
  * @returns {Promise<Object>} Updated room object
  * @throws {Error} If authorization fails, room not found, or validation fails
  */
@@ -314,9 +317,20 @@ async function updateRoomPricing(actorId, actorRole, roomId, pricing) {
     updates.type = pricing.type;
   }
 
+  // Add images if provided
+  if (pricing.image_1 !== undefined) {
+    updates.image_1 = pricing.image_1;
+  }
+  if (pricing.image_2 !== undefined) {
+    updates.image_2 = pricing.image_2;
+  }
+  if (pricing.image_3 !== undefined) {
+    updates.image_3 = pricing.image_3;
+  }
+
   // Ensure at least one field is being updated
   if (Object.keys(updates).length === 0) {
-    throw new Error('At least one pricing field (price_per_night or type) must be provided');
+    throw new Error('At least one field must be provided for update');
   }
 
   // Get current room state for audit log

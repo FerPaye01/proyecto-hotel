@@ -406,7 +406,7 @@ function renderRoomsTable(roomsData, tableBody) {
             <td>$${parseFloat(room.price_per_night).toFixed(2)}</td>
             <td><span class="badge badge-${room.status.toLowerCase()}">${room.status}</span></td>
             <td>
-                <button class="btn-edit" onclick="openEditPricingModal(${room.id}, '${escapeHtml(room.number)}', '${room.type}', ${room.price_per_night})" title="Editar precio y tipo">
+                <button class="btn-edit" onclick='openEditPricingModal(${JSON.stringify(room)})' title="Editar precio, tipo e imágenes">
                     ✏️ Editar
                 </button>
             </td>
@@ -1427,16 +1427,40 @@ function getChartsForReport(reportName) {
 
 
 // Open edit pricing modal
-function openEditPricingModal(roomId, roomNumber, roomType, currentPrice) {
+function openEditPricingModal(room) {
     const modal = document.getElementById('edit-pricing-modal');
     if (modal) {
         modal.classList.add('show');
         
         // Set form values
-        document.getElementById('pricing-room-id').value = roomId;
-        document.getElementById('pricing-room-number').value = `Habitación ${roomNumber}`;
-        document.getElementById('pricing-type').value = roomType;
-        document.getElementById('pricing-price').value = parseFloat(currentPrice).toFixed(2);
+        document.getElementById('pricing-room-id').value = room.id;
+        document.getElementById('pricing-room-number').value = `Habitación ${room.number}`;
+        document.getElementById('pricing-type').value = room.type;
+        document.getElementById('pricing-price').value = parseFloat(room.price_per_night).toFixed(2);
+        
+        // Show/hide image fields based on type
+        const image2Group = document.getElementById('edit-image-2-group');
+        const image3Group = document.getElementById('edit-image-3-group');
+        if (room.type === 'suite') {
+            image2Group.style.display = 'block';
+            image3Group.style.display = 'block';
+        } else {
+            image2Group.style.display = 'none';
+            image3Group.style.display = 'none';
+        }
+        
+        // Show current images
+        displayCurrentImage('current-image-1', room.image_1, 'Imagen actual 1');
+        displayCurrentImage('current-image-2', room.image_2, 'Imagen actual 2');
+        displayCurrentImage('current-image-3', room.image_3, 'Imagen actual 3');
+        
+        // Clear new image previews
+        document.getElementById('edit-preview-1').style.display = 'none';
+        document.getElementById('edit-preview-2').style.display = 'none';
+        document.getElementById('edit-preview-3').style.display = 'none';
+        document.getElementById('edit-image-1').value = '';
+        document.getElementById('edit-image-2').value = '';
+        document.getElementById('edit-image-3').value = '';
         
         // Clear messages
         const messageEl = document.getElementById('pricing-message');
@@ -1444,6 +1468,23 @@ function openEditPricingModal(roomId, roomNumber, roomType, currentPrice) {
             messageEl.textContent = '';
             messageEl.className = 'message';
         }
+    }
+}
+
+// Display current image thumbnail
+function displayCurrentImage(containerId, imageData, label) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (imageData) {
+        container.innerHTML = `
+            <div style="margin-top: 5px;">
+                <small style="color: #666;">${label}:</small><br>
+                <img src="${imageData}" style="max-width: 100px; max-height: 100px; border-radius: 5px; margin-top: 5px; border: 1px solid #ddd;">
+            </div>
+        `;
+    } else {
+        container.innerHTML = '<small style="color: #999;">Sin imagen</small>';
     }
 }
 
@@ -1471,16 +1512,34 @@ async function handleEditPricing(event) {
             throw new Error('No hay sesión activa');
         }
         
+        // Process images
+        const image1File = document.getElementById('edit-image-1').files[0];
+        const image2File = document.getElementById('edit-image-2').files[0];
+        const image3File = document.getElementById('edit-image-3').files[0];
+        
+        const updateData = {
+            type: type,
+            price_per_night: price
+        };
+        
+        // Convert new images to base64 if provided
+        if (image1File) {
+            updateData.image_1 = await fileToBase64(image1File);
+        }
+        if (image2File && type === 'suite') {
+            updateData.image_2 = await fileToBase64(image2File);
+        }
+        if (image3File && type === 'suite') {
+            updateData.image_3 = await fileToBase64(image3File);
+        }
+        
         const response = await fetch(`/api/rooms/${roomId}/pricing`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                type: type,
-                price_per_night: price
-            })
+            body: JSON.stringify(updateData)
         });
         
         const data = await response.json();
@@ -1564,3 +1623,19 @@ function fileToBase64(file) {
         reader.readAsDataURL(file);
     });
 }
+
+
+// Show/hide image fields in edit modal based on room type
+document.getElementById('pricing-type')?.addEventListener('change', function() {
+    const type = this.value;
+    const image2Group = document.getElementById('edit-image-2-group');
+    const image3Group = document.getElementById('edit-image-3-group');
+    
+    if (type === 'suite') {
+        image2Group.style.display = 'block';
+        image3Group.style.display = 'block';
+    } else {
+        image2Group.style.display = 'none';
+        image3Group.style.display = 'none';
+    }
+});
