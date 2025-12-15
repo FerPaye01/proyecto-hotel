@@ -226,23 +226,78 @@ function closeCheckoutModal() {
     }
 }
 
-// Populate room select dropdown with occupied rooms
-function populateRoomSelect() {
-    const selectEl = document.getElementById('roomId');
-    if (!selectEl) return;
+// Open payment modal
+function openPaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.classList.add('active');
+        // Clear previous values
+        document.getElementById('paymentBookingId').value = '';
+        document.getElementById('paymentAmount').value = '';
+        document.getElementById('paymentMethod').value = '';
+        hideMessage('paymentError');
+        hideMessage('paymentSuccess');
+    }
+}
 
-    const occupiedRooms = rooms.filter(r => r.status === 'OCCUPIED');
+// Close payment modal
+function closePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Handle payment form submission
+async function handlePayment(event) {
+    event.preventDefault();
     
-    const typeTranslations = {
-        'simple': 'Simple',
-        'doble': 'Doble',
-        'suite': 'Suite'
-    };
+    const bookingId = document.getElementById('paymentBookingId').value.trim();
+    const amount = parseFloat(document.getElementById('paymentAmount').value);
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const token = getToken();
     
-    selectEl.innerHTML = '<option value="">Selecciona una habitación</option>' +
-        occupiedRooms.map(room => 
-            `<option value="${room.id}">Habitación ${room.number} (${typeTranslations[room.type] || room.type})</option>`
-        ).join('');
+    if (!bookingId || !amount || !paymentMethod) {
+        showMessage('paymentError', 'Por favor completa todos los campos');
+        return;
+    }
+
+    if (amount <= 0) {
+        showMessage('paymentError', 'El monto debe ser mayor a 0');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/operations/payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                booking_id: bookingId,
+                amount: amount,
+                payment_method: paymentMethod
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al procesar el pago');
+        }
+
+        showMessage('paymentSuccess', `¡Pago procesado exitosamente! Monto: $${amount.toFixed(2)}`);
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+            closePaymentModal();
+        }, 2000);
+
+    } catch (error) {
+        console.error('Payment error:', error);
+        showMessage('paymentError', error.message || 'Error al procesar el pago');
+    }
 }
 
 // Handle check-in form submission
@@ -290,11 +345,11 @@ async function handleCheckin(event) {
 async function handleCheckout(event) {
     event.preventDefault();
     
-    const roomId = document.getElementById('roomId').value;
+    const bookingId = document.getElementById('checkoutBookingId').value.trim();
     const token = getToken();
     
-    if (!roomId) {
-        showMessage('checkoutError', 'Por favor selecciona una habitación');
+    if (!bookingId) {
+        showMessage('checkoutError', 'Por favor ingresa el ID de la reserva');
         return;
     }
 
@@ -305,7 +360,7 @@ async function handleCheckout(event) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ room_id: parseInt(roomId) })
+            body: JSON.stringify({ booking_id: bookingId })
         });
 
         const data = await response.json();
@@ -314,12 +369,17 @@ async function handleCheckout(event) {
             throw new Error(data.message || 'Error en el check-out');
         }
 
-        showMessage('checkoutSuccess', '¡Check-out completado exitosamente!');
+        let successMsg = '¡Check-out completado exitosamente!';
+        if (data.lateFee && data.lateFee > 0) {
+            successMsg += ` Cargo adicional por salida tardía: $${data.lateFee.toFixed(2)}`;
+        }
         
-        // Close modal after 1.5 seconds
+        showMessage('checkoutSuccess', successMsg);
+        
+        // Close modal after 2 seconds
         setTimeout(() => {
             closeCheckoutModal();
-        }, 1500);
+        }, 2000);
 
     } catch (error) {
         console.error('Check-out error:', error);
@@ -365,12 +425,20 @@ function logout() {
 window.onclick = function(event) {
     const checkinModal = document.getElementById('checkinModal');
     const checkoutModal = document.getElementById('checkoutModal');
+    const paymentModal = document.getElementById('paymentModal');
+    const changeStatusModal = document.getElementById('changeStatusModal');
     
     if (event.target === checkinModal) {
         closeCheckinModal();
     }
     if (event.target === checkoutModal) {
         closeCheckoutModal();
+    }
+    if (event.target === paymentModal) {
+        closePaymentModal();
+    }
+    if (event.target === changeStatusModal) {
+        closeChangeStatusModal();
     }
 }
 
